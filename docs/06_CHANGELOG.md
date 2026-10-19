@@ -1,0 +1,258 @@
+# Changelog
+
+## 2026-10-19 — Tercera ronda de posiciones (DHB y 1ª Andaluza)
+
+### Añadido
+
+- Nuevas posiciones desde **Deporte de la Isla**, **Deporte Alicante**, **El Castillo de San Fernando** y la **web oficial del CD Giner de los Ríos**.
+- San Fernando DHB:
+  - Lázaro Navas → portero.
+  - Vicente Aguirrezabala → medio.
+  - Javi Galindo → defensa.
+  - Óscar Gago → delantero.
+  - Pablo Silva, Carlos Ramírez, Juan Muiño, Julián Agenjo, Samuel Cortés, Raúl Narváez, Dani Sánchez, Álvaro Varela, Dani Aguilera y Juan García → posiciones de 2024-25/2023-24, con confianza Baja/Media y nota de temporada.
+- Borja Valcarcel (Giner) → defensa.
+- Peio Gárate (Jolaseta) → defensa lateral.
+- Pedro Arques (San Vicente) → delantero.
+- José Antonio Hurtado (1ª Andaluza) → defensa; Álvaro Romero → delantero; Rubén Ramos → portero.
+
+### Cobertura
+
+- **175 posiciones oficiales** (17,9%).
+- **801 estimadas** (82,1%).
+- **100 jugadores de campo con posición oficial**.
+- **399 subposiciones Central/Lateral estimadas**.
+
+## 2026-10-19 — Segunda ronda de posiciones
+
+### Añadido
+
+- Nuevas posiciones desde **8SPORTS.es**, **Canarias7**, **Diari de Terrassa**, **EuroHockey**, **Global Sports Archive**, **CAH** y **University of Pretoria**.
+- Jugadores incorporados:
+  - Tyler Tomsett y Manuel Silvetti (UD Taburiente) → delanteros.
+  - Nil Trujillo (Egara 1935) y Àlex Aymerich (Vallès) → delanteros.
+  - Josep Martin Gutes (CD Terrassa), Albert Serrahima y Nicolau Mustaros (Junior) → delanteros.
+  - Jared Pazafcass (Junior) → defensa.
+  - Joaquín Kruger (Sanse) → medio.
+  - Rafael Villalonga (RC de Campo) → medio.
+  - Ricardo Sánchez (RC de Campo) → defensa central.
+- Ricardo Sánchez, con 30 goles, pasa de delantero estimado a **central**; el modelo lo valora con pesos defensivos (overall central 89,9, arquetipo Muro).
+- Cobertura oficial: **153 perfiles** (15,7%); estimados: **823** (84,3%); jugadores de campo oficiales: **81**.
+
+### Descartado
+
+- Enrique Zorita (RC de Campo) → defensa: solo hay una fuente de 2019-20 y contradice su perfil goleador actual.
+- Enrique González (RC de Campo) → defensa: GSA dice defensa, pero la plantilla oficial 2019-20 lo situaba como medio.
+- Sebastián Wolansky (FC Barcelona) → defensa: posible confusión de identidad y club.
+- Alex Brecha (Egara 1935) → medio/delantero: nombre ambiguo y perfil de invitado.
+
+## 2026-10-19 — Búsqueda de posiciones en prensa y selección
+
+### Añadido
+
+- Revisión de las **actas oficiales de la RFEH**: confirman porteros y alineaciones, pero no la posición de los jugadores de campo (la columna P/J solo distingue portero/jugador).
+- Nuevas posiciones desde **Diari de Terrassa**:
+  - Jan Clapés Castells (Club Egara) → defensa.
+  - Marco Aguirregomezcorta (Club Egara) → delantero.
+  - Borja Soler (CD Terrassa) → delantero.
+- Nuevas posiciones desde **Mundo Deportivo** (lista de la selección española 2025):
+  - Bruno Font (Junior FC) → medio.
+  - Ignacio Abajo, José Basterra y Álvaro Iglesias (RC de Campo) → delanteros.
+- Script `tools/apply_positions.py` para aplicar posiciones nuevas al manifiesto con backup y modo `--dry-run`.
+- Catálogo `tools/position_sources.csv` con fuentes, URLs, fecha y cobertura.
+- Hoja **Fuentes posiciones** en el Excel, con URL y fecha por jugador.
+- Columnas **URL posición** y **Fecha posición** en las hojas de jugadores.
+
+### Cambiado
+
+- Jan Clapés Castells pasa de delantero estimado a defensa.
+- Bruno Font Abad pasa de delantero estimado a medio.
+- La cobertura oficial sube de 135 a 142 perfiles; los estimados bajan de 841 a 834.
+
+Historial de cambios del proyecto. Las fechas son las de la sesión de trabajo; los datos de competición tienen su propia fecha de corte.
+
+---
+
+## 2026-10-19 — Modelo avanzado, editor y documentación
+
+### Añadido
+
+- Modelo de **37 atributos** en seis grupos:
+  - Técnica (7).
+  - 3D y set pieces (10).
+  - Táctica (5).
+  - Física (5).
+  - Mental (4).
+  - Portero (6).
+- Cinco **overalls posicionales**:
+  - Portero, Central, Lateral, Medio y Delantero.
+- **Arquetipos** por posición.
+- **Polivalencia**, potencial y valor de mercado.
+- **Especialistas de set pieces** por equipo:
+  - Inyector, stopper, drag flicker, desviador, primer runner, portero de PC, tirador de stroke, portero de stroke, aéreo y faltas.
+- **Perfil agregado de set pieces** por equipo:
+  - PC ataque, PC defensa, stroke, parada de stroke y aerial.
+- Atributos específicos para:
+  - saque de penalty corner (`pc_injection`);
+  - parada de PC (`pc_trap`);
+  - tiro de PC / drag flick (`pc_flick`);
+  - desvío (`pc_deflection`);
+  - primer runner (`pc_first_runner`);
+  - parada de PC del portero (`pc_gk_save`);
+  - tiro de stroke (`stroke_shot`);
+  - parada de stroke (`stroke_save`);
+  - faltas, 16 yardas y córners (`free_hit`);
+  - aerial (`aerial`);
+  - 3D (`regate_3d`).
+- **Editor de jugador** en el juego:
+  - Cambio de posición.
+  - Edición de los 37 atributos.
+  - Recálculo de overall, potencial, valor, arquetipo y ratings de equipo.
+  - Persistencia en `localStorage`.
+  - Etiqueta **Ajuste manual** en la ficha.
+  - Botón para quitar el ajuste manual.
+- Excel ampliado:
+  - Hojas de atributos, especialistas, equipos, diccionario y cobertura.
+  - Imágenes preservadas.
+- CSV `jugadores_atributos_2026_27.csv`.
+- Documentación maestra en `docs/`.
+- Scripts persistentes en `tools/`.
+
+### Cambiado
+
+- El overall ya no se calcula solo con goles.
+- La tabla de jugadores muestra **Central/Lateral/Medio/Delantero/Portero**.
+- El filtro de posición usa las subposiciones.
+- La ficha del jugador muestra:
+  - 37 atributos agrupados;
+  - cinco overalls;
+  - arquetipo;
+  - especialistas;
+  - botón de edición.
+- La ficha de equipo muestra los especialistas.
+- Los ratings de equipo usan `attackScore` y `defenseScore` derivados de atributos.
+- El `scoutText` explica la posición y los especialistas.
+- El Excel de jugadores incluye subposición, grupo, arquetipo, overall, potencial, valor, polivalencia, overalls y especialistas.
+
+### Corregido
+
+- Un central con goles ya no se clasifica como delantero.
+- Bruno Àvila Gran (56 goles) se mantiene como Central, overall 84,2, arquetipo Muro.
+- Iain Martin McFadden se mantiene como Central, overall 73,9, arquetipo Central constructor.
+- Los porteros tienen atributos de portero altos y atributos de campo bajos.
+- La subposición se marca como estimada cuando la fuente solo indica “Defensa”.
+
+### Archivos
+
+- `juego_hockey/index.html`
+- `juego_hockey/README.md`
+- `equipos_hockey_hierba_espana_masculino_2026_27_con_atributos.xlsx`
+- `jugadores_atributos_2026_27.csv`
+- `tools/build_attributes_v2.py`
+- `tools/generate_game.py`
+- `tools/build_excel_attributes.py`
+- `tools/hockey_template.html`
+- `docs/00_PROYECTO.md` … `docs/07_GUIA_JUEGO.md`
+
+---
+
+## 2026-10-18 — Formato real y posiciones
+
+### Añadido
+
+- Formato real DHA:
+  - 12 equipos, 22 jornadas.
+  - Final Four.
+  - Descenso directo del 12º.
+  - Playout del 11º contra el 2º elegible de DHB.
+- Formato real DHB:
+  - Dos grupos de 8.
+  - Primera fase de 14 partidos.
+  - Segunda fase Grupo A/B con 6 arrastrados + 8 cruzados.
+  - Final Four.
+  - Ascenso del 1º elegible.
+  - Playout del 2º elegible.
+  - Descenso de 15º y 16º.
+- Clubes vinculados y elegibilidad.
+- Proyección DHA 2027-28.
+- Posiciones para 976 perfiles:
+  - 135 oficiales.
+  - 841 estimadas.
+  - 72 porteros.
+- Informe de ligas y informe de posiciones.
+- PDF de ambos informes.
+
+### Cambiado
+
+- El juego pasó de un formato genérico a DHA/DHB real.
+- La tabla de jugadores incorporó posición y fuente.
+- El Excel incorporó posiciones y cobertura.
+
+### Archivos
+
+- `juego_hockey/index.html`
+- `informe_sistema_ligas_DHA_DHB_2026_27.md`
+- `informe_posiciones_DHA_DHB_2026_27.md`
+- `equipos_hockey_hierba_espana_masculino_2026_27_con_posiciones.xlsx`
+- `jugadores_posiciones_2026_27.csv`
+
+---
+
+## 2026-10-17 — Juego HTML y datos base
+
+### Añadido
+
+- Lista única de clubes de DHA, DHB y primeras autonómicas.
+- Plantillas con jugadores e invitados.
+- Imágenes de jugadores.
+- Juego HTML con:
+  - Inicio.
+  - Equipos.
+  - Jugadores.
+  - Simulador.
+  - Conclusiones.
+- Valoraciones iniciales basadas en goles.
+- Excel y CSV de equipos y jugadores.
+
+### Cambiado
+
+- Se excluyeron filiales y duplicados.
+- Se añadió San Fernando 1ª Andaluza.
+- Se normalizaron nombres y equipos.
+
+---
+
+## 2026-10-16 — Investigación inicial
+
+### Añadido
+
+- Investigación del sistema de ligas DHA/DHB.
+- Recopilación de fuentes RFEH, clubes y prensa.
+- Primer listado de equipos.
+- Primer análisis de posiciones.
+
+---
+
+## Plantilla para futuros cambios
+
+```markdown
+## AAAA-MM-DD — Título
+
+### Añadido
+- ...
+
+### Cambiado
+- ...
+
+### Corregido
+- ...
+
+### Eliminado
+- ...
+
+### Archivos
+- ...
+
+### Pruebas
+- ...
+```

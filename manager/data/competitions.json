@@ -1,0 +1,33 @@
+{
+  "DHA": {
+    "name": "Liga IATI Hockey - División de Honor A Masculina",
+    "teams": 12,
+    "format": "double_round_robin",
+    "regular_rounds": 22,
+    "points": {"win": 3, "draw": 1, "loss": 0},
+    "tiebreakers": ["head_to_head_points", "head_to_head_goal_difference", "head_to_head_goals_for", "goal_difference", "goals_for", "shootout"],
+    "final_four": {"teams": 4, "semifinals": ["1v4", "2v3"], "final": true, "third_place": false},
+    "relegation": {"direct": [12], "playout": [11]},
+    "playout": {"format": "best_of_3", "opponent": "DHB_2nd_eligible", "home_pattern": ["DHA", "DHB", "DHB"]},
+    "europe": {"ehl": [1, 2], "notes": "Plazas dependen de Copa y ranking; no simulado en MVP."}
+  },
+  "DHB": {
+    "name": "Liga IATI Hockey - División de Honor B Masculina",
+    "teams": 16,
+    "first_phase": {"groups": 2, "teams_per_group": 8, "format": "double_round_robin", "rounds": 14},
+    "second_phase": {
+      "group_a": {"teams": 8, "composition": "top4_each_first_phase_group", "carry_over": 6, "cross_matches": 8, "total": 14},
+      "group_b": {"teams": 8, "composition": "bottom4_each_first_phase_group", "carry_over": 6, "cross_matches": 8, "total": 14}
+    },
+    "final_four": {"teams": 4, "from": "group_a_top4", "semifinals": ["1v4", "2v3"], "final": true},
+    "promotion": {"direct": "group_a_1st_eligible", "playout": "group_a_2nd_eligible"},
+    "relegation": {"direct": [15, 16]},
+    "linked_clubs": {"rule": "Un equipo vinculado no puede ascender si su club matriz está en DHA."}
+  },
+  "1A": {
+    "name": "Primera División Andaluza Masculina",
+    "teams": 1,
+    "format": "guest_team",
+    "notes": "San Fernando se incluye como caso representativo; no se simula la liga autonómica completa."
+  }
+}

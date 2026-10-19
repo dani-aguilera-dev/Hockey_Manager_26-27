@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Manager saves (locales)
+manager/saves/*.db
+manager/saves/*.json
+manager/saves/*.sqlite
+manager/saves/*.sqlite3
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Entornos y editores
+.env
+.env.*
+.vscode/
+.idea/
+
+# Bloqueos de LibreOffice
+.~lock.*
+*.xlsx#
