@@ -22,9 +22,9 @@ def _round_robin(ids: list[str]) -> list[list[tuple[str, str]]]:
     return rounds
 
 
-def create_dha_fixtures(team_ids: list[str], start: str = "2026-09-20") -> list[Fixture]:
-    if len(team_ids) != 12:
-        raise ValueError("La DHA debe tener 12 equipos")
+def create_fixtures(team_ids: list[str], start: str = "2026-09-20") -> list[Fixture]:
+    if len(team_ids) < 2 or len(team_ids) % 2:
+        raise ValueError("La liga debe tener un número par de equipos")
     first = _round_robin(team_ids)
     second = [[(b, a) for a, b in rd] for rd in first]
     fixtures: list[Fixture] = []
@@ -37,6 +37,12 @@ def create_dha_fixtures(team_ids: list[str], start: str = "2026-09-20") -> list[
                 home_id=h, away_id=a, phase="regular",
             ))
     return fixtures
+
+
+def create_dha_fixtures(team_ids: list[str], start: str = "2026-09-20") -> list[Fixture]:
+    if len(team_ids) != 12:
+        raise ValueError("La DHA debe tener 12 equipos")
+    return create_fixtures(team_ids, start)
 
 
 def sort_table(teams: list[TeamState]) -> list[TeamState]:
@@ -69,8 +75,12 @@ def recompute_table(teams: dict[str, TeamState], fixtures: list[Fixture]) -> Non
             apply_result(teams, f.home_id, f.away_id, f.home_goals, f.away_goals)
 
 
+def league_table(teams: dict[str, TeamState], league: str) -> list[TeamState]:
+    return sort_table([t for t in teams.values() if t.league == league])
+
+
 def dha_table(teams: dict[str, TeamState]) -> list[TeamState]:
-    return sort_table([t for t in teams.values() if t.league == "DHA"])
+    return league_table(teams, "DHA")
 
 
 def top_four(teams: dict[str, TeamState]) -> list[TeamState]:

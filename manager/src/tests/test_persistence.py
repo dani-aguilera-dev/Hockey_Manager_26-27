@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 from src.season import new_game, play_round, ensure_week_training
+from src.market import generate_incoming_offers, renew_contract
 from src.persistence import save_game, load_game, list_saves, export_json, import_json
 
 
@@ -37,6 +38,20 @@ def test_training_state_roundtrip():
         assert loaded.weekly_plan == state.weekly_plan
         assert loaded.user_team.prep_bonus == state.user_team.prep_bonus
         assert loaded.training_report["plan_name"] == state.training_report["plan_name"]
+
+
+def test_market_state_roundtrip():
+    state = new_game("cd-terrassa", "Test", seed=89)
+    generate_incoming_offers(state)
+    player = max(state.user_team.players, key=lambda p: p.overall)
+    renew_contract(state, player.id, player.salary * 2, 3)
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "market.db"
+        name = save_game(state, "market-test", db)
+        loaded = load_game(name, db)
+        assert loaded.transfer_offers == state.transfer_offers
+        assert loaded.market_history == state.market_history
+        assert loaded.user_team.players[0].contract_until
 
 
 def test_json_roundtrip():

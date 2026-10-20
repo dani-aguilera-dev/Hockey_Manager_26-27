@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-10-20 — Fase 3: mercado, contratos y multi-temporada
+
+### Añadido
+
+- Mercado de fichajes con ventanas de verano e invierno.
+- Búsqueda de jugadores con informe de ojeador y horquilla de overall.
+- Ofertas de traspaso, negociación de salario y contrato.
+- Ofertas recibidas por jugadores propios.
+- Mercado IA entre clubes rivales.
+- Renovaciones y expiración de contratos.
+- Contratación y despido de staff.
+- Multi-temporada:
+  - ascensos y descensos DHA/DHB;
+  - liga DHB simplificada de 16 equipos y 30 jornadas;
+  - envejecimiento, retiradas, canteranos de relleno y nueva temporada.
+- `manager/docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`.
+- Tests de mercado y multi-temporada.
+
+### Cambiado
+
+- El calendario y la clasificación son genéricos para DHA y DHB.
+- La temporada puede continuar varias veces.
+- Si el club desciende, la siguiente temporada se juega en DHB.
+- Tests ampliados a 36.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 36 tests superados.
+
+---
+
 ## 2026-10-20 — Staff, junta directiva y finanzas
 
 ### Añadido

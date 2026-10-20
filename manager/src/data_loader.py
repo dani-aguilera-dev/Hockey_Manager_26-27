@@ -1,7 +1,7 @@
 """Carga de clubes, ciudades y jugadores para el Hockey Manager."""
 from __future__ import annotations
 
-import csv, json, re, unicodedata
+import csv, json, re, unicodedata, zlib
 from pathlib import Path
 from .models import PlayerState, TeamState, Tactics, StaffMember, BoardMember
 
@@ -133,6 +133,10 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
                 poly = float(r.get("polivalencia") or 0)
             except Exception:
                 poly = 0.0
+            contract_years = 1 + zlib.crc32(pid.encode("utf-8")) % 4
+            if age >= 32:
+                contract_years = 1
+            contract_until = f"{2027 + contract_years - 1}-06-30"
             players.append(PlayerState(
                 id=pid, name=name, team_name=club["name"],
                 position_group=str(r.get("position_group") or r.get("pos") or "Medio"),
@@ -141,6 +145,7 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
                 archetype=str(r.get("archetype") or "Jugador"),
                 perfil=str(r.get("perfil") or "Jugador"),
                 goals_isquad=goals, value=value, polivalencia=poly, overalls=overalls,
+                contract_until=contract_until,
             ))
         fin = club.get("finances", {})
         stadium = club.get("stadium", {})

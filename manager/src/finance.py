@@ -22,7 +22,7 @@ def apply_round_finances(state: Any) -> None:
     if getattr(state, "finance_round", 0) == state.round:
         return
     for team in state.teams.values():
-        if team.league != "DHA":
+        if team.league not in ("DHA", "DHB"):
             continue
         fixtures = [f for f in state.fixtures if f.phase == "regular" and f.round == state.round and f.played]
         gate = sum(int(f.home_stats.get("gate_revenue", 0)) for f in fixtures if f.home_id == team.id)

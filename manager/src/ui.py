@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .models import GameState, PlayerState, TeamState, FORMATION_SLOTS
 from .data_loader import load_clubs, load_teams, dha_teams
-from .calendar import dha_table
+from .calendar import league_table
 from .logistics import travel_options
 from .season import (new_game, play_round, make_lineup, season_summary,
                     prepare_live_round, finish_live_round, ensure_week_training)
@@ -20,6 +20,10 @@ from .training import (SESSION_TYPES, SESSION_ORDER, DAYS, PLAN_PRESETS,
                        auto_plan, apply_training_plan, format_plan, plan_name)
 from .persistence import DEFAULT_DB, save_game, load_game, list_saves
 from .finance import financial_summary, sponsor_income
+from .market import (market_window, market_window_text, market_players, asking_price,
+                     scout_range, make_transfer_offer, generate_incoming_offers,
+                     accept_incoming_offer, reject_incoming_offer, renew_contract,
+                     staff_candidates, hire_staff, fire_staff, STAFF_LABELS)
 
 W = 100
 WEEKDAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -225,6 +229,7 @@ class GameUI:
             print("  9. Salir")
             print("  E. Entrenamiento semanal")
             print("  S. Staff y junta directiva")
+            print("  M. Mercado y contratos")
             print("  A. Simular jornada (auto)")
             op = ask("\n  > ").lower()
             if op == "1":
@@ -250,6 +255,8 @@ class GameUI:
                 self.training_screen()
             elif op == "s":
                 self.staff_screen()
+            elif op == "m":
+                self.market_screen()
             elif op == "a":
                 self.auto_round()
             else:
@@ -260,7 +267,7 @@ class GameUI:
     def print_dashboard(self):
         s = self.state
         t = s.user_team
-        header(f"DASHBOARD · {fmt_date(s.date)} · {t.name.upper()} · DHA")
+        header(f"DASHBOARD · {fmt_date(s.date)} · {t.name.upper()} · {s.competition}")
         fx = s.next_user_fixture()
         if fx:
             home = s.teams[fx.home_id]
@@ -271,9 +278,9 @@ class GameUI:
             print(f"Jornada {fx.round} · {fmt_date(fx.date)} · {venue} · {rival.stadium_name if venue == 'fuera' else t.stadium_name}")
         else:
             print("Próximo partido:  temporada regular finalizada")
-        table = dha_table(s.teams)
+        table = s.table()
         pos = next((i for i, x in enumerate(table, 1) if x.id == t.id), 0)
-        print(f"Posición: {pos}º/12 · {t.points} pts · {t.played} PJ · {t.won}G {t.drawn}E {t.lost}P · GF {t.goals_for} / GC {t.goals_against}")
+        print(f"Posición: {pos}º/{len(table)} · {t.points} pts · {t.played} PJ · {t.won}G {t.drawn}E {t.lost}P · GF {t.goals_for} / GC {t.goals_against}")
         print(f"Forma: {self.form_string()} · Moral: {t.morale}/20 · Junta: {t.board_confidence}/100 · Afición: {t.fan_confidence}/100")
         mg = t.management_profile()
         print(f"Gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión: {t.cohesion}/20 · Mánager: {t.manager_rating}/100")
@@ -449,8 +456,8 @@ class GameUI:
         s = self.state
         t = s.user_team
         header(f"CALENDARIO Y CLASIFICACIÓN · {t.name.upper()}")
-        section("CLASIFICACIÓN DHA")
-        table = dha_table(s.teams)
+        section(f"CLASIFICACIÓN {s.competition}")
+        table = s.table()
         print(f"{'#':>3}  {'Equipo':<38} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         line()
         for i, x in enumerate(table, 1):
@@ -507,156 +514,206 @@ class GameUI:
 
     def staff_screen(self):
         t = self.state.user_team
-        header(f"STAFF Y JUNTA · {t.name.upper()}")
-        roles = {
-            "assistant": "Segundo entrenador", "fitness_coach": "Preparador físico",
-            "gk_coach": "Entrenador de porteros", "performance_analyst": "Analista de rendimiento",
-            "scout": "Ojeador", "physio": "Fisioterapeuta", "technical_director": "Director deportivo",
-        }
-        section("STAFF TÉCNICO")
-        print(f"{'Rol':<26} {'Nombre':<28} {'Rating':>6} {'Salario':>10}  Fuente")
-        line()
-        for m in t.staff:
-            print(f"{roles.get(m.role, m.role):<26} {short(m.name,28):<28} {m.rating:>6} {money(m.salary):>10}  {m.source} ({m.confidence})")
-        section("EFECTOS DEL STAFF")
-        print(f"  Plan automático / charla: segundo entrenador {t.staff_rating('assistant')}/100")
-        print(f"  Entrenamiento físico y prevención: preparador {t.staff_rating('fitness_coach')}/100")
-        print(f"  Recuperación y lesiones: fisioterapeuta {t.staff_rating('physio')}/100")
-        print(f"  Vídeo y preparación del rival: analista {t.staff_rating('performance_analyst')}/100")
-        print(f"  Porteros y set pieces: entrenador de porteros {t.staff_rating('gk_coach')}/100")
-        section("JUNTA DIRECTIVA")
-        print(f"{'Cargo':<22} {'Nombre':<34} Fuente")
-        line()
-        board_roles = {"presidente": "Presidente", "vicepresidente": "Vicepresidente", "secretario": "Secretario",
-                       "tesorero": "Tesorero", "vocal_hockey": "Vocal de hockey", "vocal_social": "Vocal social"}
-        for m in t.board:
-            print(f"{board_roles.get(m.role, m.role):<22} {short(m.name,34):<34} {m.source} ({m.confidence})")
-        print(f"\n  Objetivo: {t.board_expectation} · Confianza: {t.board_confidence}/100")
-        pause()
-
-    # ------------------------------------------------------------- logística
-    def logistics_screen(self):
-        s = self.state
-        t = s.user_team
-        header(f"LOGÍSTICA · {t.name.upper()}")
-        fx = s.next_user_fixture()
-        if not fx:
-            print("No hay próximo partido.")
-            pause()
-            return
-        if fx.home_id == t.id:
-            print(f"Próximo partido en casa: {t.name} vs {s.teams[fx.away_id].name}")
-            print(f"Estadio: {t.stadium_name} · Sin desplazamiento.")
-        else:
-            rival = s.teams[fx.home_id]
-            print(f"Próximo partido fuera: {rival.name} vs {t.name}")
-            print(f"Estadio rival: {rival.stadium_name} · {rival.city}")
-            opts = travel_options(t, rival, self.cities, squad_size=18)
-            print("\nOpciones de viaje:")
-            for i, o in enumerate(opts, 1):
-                print(f"  {i}. {o['label']:<26} {o['mode']:<7} {o['distance_km']:>5} km · {o['hours']:>4} h · {money(o['cost']):>10} · fatiga +{o['fatigue']*100:.0f}% · {o['hotel_nights']} noche(s)")
-                print(f"     {o['notes']}")
-        section("ESTADO FÍSICO")
-        players = sorted(t.players, key=lambda p: p.fatigue, reverse=True)[:6]
-        for p in players:
-            print(f"  {p.name:<36} fatiga {p.fatigue:>5.1f}% · {status(p)}")
-        print(f"\nModo habitual del club: {t.preferred_mode or '—'}")
-        pause()
-
-    # ------------------------------------------------------------- entrenamiento
-    def training_screen(self):
-        s = self.state
-        t = s.user_team
-        fx = s.next_user_fixture()
-        opp = None
-        if fx:
-            opp_id = fx.away_id if fx.home_id == t.id else fx.home_id
-            opp = s.teams.get(opp_id)
+        roles = STAFF_LABELS
         while True:
-            header("ENTRENAMIENTO SEMANAL")
-            if fx:
-                print(f"Próximo partido: {s.teams[fx.home_id].name} vs {s.teams[fx.away_id].name} · {fmt_date(fx.date)}")
-            print(f"Segundo entrenador: {t.assistant_rating}/100 · Fatiga media {sum(p.fatigue for p in t.players)/max(1,len(t.players)):.1f}% · Moral {t.morale}/20")
-            if s.week_trained:
-                self.print_training_report(s.training_report)
-                pause()
-                return
-            print("\n  [Enter] Plan automático (segundo entrenador)")
-            print("  [E] Editar plan sesión a sesión")
-            print("  [R] Semana de recuperación")
-            print("  [V] Volver")
-            op = ask("\n  > ").lower()
-            if op in ("", "a", "auto"):
-                rng = random.Random(s.seed * 1000 + s.round * 53 + 11)
-                plan = auto_plan(t, opp, rng)
-                self._apply_training_and_report(plan, opp, delegated=True)
-                return
-            if op == "e":
-                plan = self.edit_training_plan(t, opp)
-                if plan:
-                    self._apply_training_and_report(plan, opp, delegated=False)
-                    return
-            elif op == "r":
-                self._apply_training_and_report(list(PLAN_PRESETS["recuperacion"]), opp, delegated=False)
-                return
-            elif op in ("v",):
-                return
-
-    def edit_training_plan(self, team: TeamState, opponent: TeamState | None) -> list[str] | None:
-        rng = random.Random(self.state.seed * 1000 + self.state.round * 53 + 13)
-        plan = auto_plan(team, opponent, rng)
-        while True:
-            header("EDITAR PLAN SEMANAL")
-            for i, session in enumerate(plan):
-                spec = SESSION_TYPES[session]
-                print(f"  {i+1}. {DAYS[i]:<10} {spec['label']:<16} fatiga {spec['fatigue']:+.0f}% · {spec['short']}")
-            print("\nSesiones disponibles:")
-            for i, key in enumerate(SESSION_ORDER, 1):
-                print(f"  {i}. {SESSION_TYPES[key]['label']}")
-            print("\n  [1-5] cambiar día · [A] aplicar plan · [V] cancelar")
+            header(f"STAFF Y JUNTA · {t.name.upper()}")
+            section("STAFF TÉCNICO")
+            print(f"{'Rol':<26} {'Nombre':<28} {'Rating':>6} {'Salario':>10}  Fuente")
+            line()
+            for m in t.staff:
+                print(f"{roles.get(m.role, m.role):<26} {short(m.name,28):<28} {m.rating:>6} {money(m.salary):>10}  {m.source} ({m.confidence})")
+            section("EFECTOS DEL STAFF")
+            print(f"  Plan automático / charla: segundo entrenador {t.staff_rating('assistant')}/100")
+            print(f"  Entrenamiento físico y prevención: preparador {t.staff_rating('fitness_coach')}/100")
+            print(f"  Recuperación y lesiones: fisioterapeuta {t.staff_rating('physio')}/100")
+            print(f"  Vídeo y preparación del rival: analista {t.staff_rating('performance_analyst')}/100")
+            print(f"  Porteros y set pieces: entrenador de porteros {t.staff_rating('gk_coach')}/100")
+            section("JUNTA DIRECTIVA")
+            print(f"{'Cargo':<22} {'Nombre':<34} Fuente")
+            line()
+            board_roles = {"presidente": "Presidente", "vicepresidente": "Vicepresidente", "secretario": "Secretario",
+                           "tesorero": "Tesorero", "vocal_hockey": "Vocal de hockey", "vocal_social": "Vocal social"}
+            for m in t.board:
+                print(f"{board_roles.get(m.role, m.role):<22} {short(m.name,34):<34} {m.source} ({m.confidence})")
+            print(f"\n  Objetivo: {t.board_expectation} · Confianza: {t.board_confidence}/100")
+            print("\n  [H] Contratar staff   [F] Despedir staff   [V] Volver")
             op = ask("  > ").lower()
             if op in ("v", ""):
-                return None
-            if op == "a":
-                return plan
-            if op.isdigit() and 1 <= int(op) <= 5:
-                day = int(op) - 1
-                raw = ask("Nueva sesión (número, Enter = mantener): ")
-                if raw.isdigit() and 1 <= int(raw) <= len(SESSION_ORDER):
-                    plan[day] = SESSION_ORDER[int(raw) - 1]
-                continue
+                return
+            if op == "h":
+                self.hire_staff_flow()
+            elif op == "f":
+                self.fire_staff_flow()
 
-    def _apply_training_and_report(self, plan: list[str], opponent: TeamState | None, delegated: bool):
-        s = self.state
-        rng = random.Random(s.seed * 1000 + s.round * 53 + 17)
-        report = apply_training_plan(s.user_team, plan, opponent, rng, delegated=delegated)
-        s.weekly_plan = list(plan)
-        s.training_report = report
-        s.week_trained = True
-        print("\n" + report["message"])
-        self.print_training_report(report)
+    def hire_staff_flow(self):
+        t = self.state.user_team
+        free_roles = [r for r in STAFF_LABELS if not any(m.role == r for m in t.staff)]
+        if not free_roles:
+            print("\nTodos los roles están cubiertos. Despide a alguien antes de contratar.")
+            pause()
+            return
+        section("CONTRATAR STAFF")
+        for i, role in enumerate(free_roles, 1):
+            print(f"  {i}. {STAFF_LABELS[role]}")
+        raw = ask("Rol (Enter = volver): ")
+        if not raw.isdigit() or not (1 <= int(raw) <= len(free_roles)):
+            return
+        role = free_roles[int(raw) - 1]
+        rng = random.Random(self.state.seed * 1000 + self.state.round * 61 + len(t.staff))
+        candidates = staff_candidates(t, role, rng)
+        section(f"CANDIDATOS · {STAFF_LABELS[role]}")
+        for i, c in enumerate(candidates, 1):
+            print(f"  {i}. {c.name:<28} rating {c.rating:>3} · salario {money(c.salary):>10} · contrato {c.contract_until}")
+        raw = ask("Elige candidato (Enter = volver): ")
+        if not raw.isdigit() or not (1 <= int(raw) <= len(candidates)):
+            return
+        candidate = candidates[int(raw) - 1]
+        result = hire_staff(self.state, candidate)
+        print("\n" + result["message"])
         pause()
 
-    def print_training_report(self, report: dict):
-        if not report:
-            print("Sin informe de entrenamiento.")
+    def fire_staff_flow(self):
+        t = self.state.user_team
+        if not t.staff:
+            print("\nNo hay staff que despedir.")
+            pause()
             return
-        section("INFORME DE ENTRENAMIENTO")
-        print(f"  Plan: {report.get('plan_name', '—')} · {format_plan(report.get('plan', []))}")
-        print(f"  Fatiga media: {report.get('fatigue_before', 0):.1f}% → {report.get('fatigue_after', 0):.1f}% · Forma: {report.get('form_before', 0):.2f} → {report.get('form_after', 0):.2f}")
-        print(f"  Moral: {report.get('morale_before', 0)}/20 → {report.get('morale_after', 0)}/20 · Cohesión: {report.get('cohesion', 0)}/20 · Preparación rival: +{report.get('prep_bonus', 0):.1f}")
-        gains = report.get("gains", [])
-        if gains:
-            print("  Progresos: " + " · ".join(f"{g['player']} {g['attr'].replace('_', ' ')} +1" for g in gains[:6]))
-        else:
-            print("  Progresos: sin subidas de atributo esta semana.")
-        injuries = report.get("injuries", [])
-        if injuries:
-            print("  Lesiones: " + " · ".join(f"{i['player']} ({i['matches']} partidos)" for i in injuries[:5]))
-        else:
-            print("  Lesiones: ninguna.")
-        if report.get("recoveries"):
-            print("  Recuperados: " + ", ".join(report["recoveries"][:6]))
+        section("DESPEDIR STAFF")
+        for i, m in enumerate(t.staff, 1):
+            print(f"  {i}. {STAFF_LABELS.get(m.role, m.role):<26} {m.name:<28} {money(m.salary)}")
+        raw = ask("Número (Enter = volver): ")
+        if not raw.isdigit() or not (1 <= int(raw) <= len(t.staff)):
+            return
+        member = t.staff[int(raw) - 1]
+        ok = ask(f"¿Despedir a {member.name}? (s/n): ").lower()
+        if ok not in ("s", "si", "sí"):
+            return
+        result = fire_staff(self.state, member.role)
+        print("\n" + result["message"])
+        pause()
+
+    # ------------------------------------------------------------- mercado
+    def market_screen(self):
+        s = self.state
+        t = s.user_team
+        while True:
+            header(f"MERCADO Y CONTRATOS · {market_window_text(s)}")
+            print(f"Caja: {money(t.budget)} · Fichajes: {money(t.transfer_budget)} · Salarios: {money(t.player_wage_bill())} + staff {money(t.staff_wage_bill())}")
+            if market_window(s) == "cerrado":
+                print("\nEl mercado está cerrado. Se abre antes del primer partido y en la jornada 12.")
+                pause()
+                return
+            print("\n  1. Buscar jugadores")
+            print(f"  2. Ofertas recibidas ({len(s.transfer_offers)})")
+            print("  3. Renovar contratos")
+            print("  4. Staff: contratar / despedir")
+            print("  V. Volver")
+            op = ask("\n  > ").lower()
+            if op in ("v", ""):
+                return
+            if op == "1":
+                self.market_search()
+            elif op == "2":
+                self.market_offers()
+            elif op == "3":
+                self.market_renewals()
+            elif op == "4":
+                self.staff_screen()
+
+    def market_search(self):
+        s = self.state
+        t = s.user_team
+        default_max = max(100000, int(t.transfer_budget / 0.70))
+        raw = ask(f"Valor máximo de mercado (Enter = {money(default_max)}): ")
+        max_value = int(raw) if raw.isdigit() else default_max
+        pos_map = {"POR": "Portero", "CEN": "Central", "LAT": "Lateral", "MED": "Medio", "DEL": "Delantero"}
+        pos_raw = ask("Posición POR/CEN/LAT/MED/DEL (Enter = todas): ").upper()
+        position = pos_map.get(pos_raw)
+        players = market_players(s, limit=30, max_value=max_value, position=position)
+        if not players:
+            print("\nNo hay jugadores que cumplan ese filtro.")
+            pause()
+            return
+        section(f"JUGADORES DISPONIBLES · {market_window_text(s)}")
+        print(f"{'#':>3}  {'Jugador':<30} {'Club':<26} {'Pos':<9} {'Edad':>4} {'OVR':>7} {'Precio':>10} {'Salario':>9}")
+        line()
+        scout = t.staff_rating("scout")
+        for i, p in enumerate(players, 1):
+            club = next((x.name for x in s.teams.values() if any(y.id == p.id for y in x.players)), "—")
+            print(f"{i:>3}  {short(p.name,30):<30} {short(club,26):<26} {p.subposition:<9} {p.age:>4} {scout_range(p, scout):>7} {money(asking_price(p)):>10} {money(p.salary):>9}")
+        raw = ask("\nNúmero para ver informe (Enter = volver): ")
+        if raw.isdigit() and 1 <= int(raw) <= len(players):
+            self.market_player_detail(players[int(raw) - 1])
+
+    def market_player_detail(self, player):
+        s = self.state
+        t = s.user_team
+        club = next((x.name for x in s.teams.values() if any(y.id == player.id for y in x.players)), "—")
+        scout = t.staff_rating("scout")
+        header(f"INFORME DE OJEADOR · {player.name.upper()}")
+        print(f"{player.subposition} · {player.age} años · {club}")
+        print(f"Overall estimado: {scout_range(player, scout)} · Valor: {money(player.value)} · Precio de salida: {money(asking_price(player))}")
+        print(f"Salario actual: {money(player.salary)} · Contrato: {player.contract_until}")
+        print(f"Ojeador: {scout}/100 · Cuanto mejor sea, más estrecho es el margen.")
+        print("\n  [O] Hacer oferta   [V] Volver")
+        if ask("  > ").lower() not in ("o", "oferta"):
+            return
+        default_fee = min(asking_price(player), t.transfer_budget)
+        raw_fee = ask(f"Traspaso (Enter = {money(default_fee)}): ")
+        fee = int(raw_fee) if raw_fee.isdigit() else default_fee
+        default_salary = max(int(player.salary * 1.30), player.salary + 3000)
+        raw_salary = ask(f"Salario anual (Enter = {money(default_salary)}): ")
+        salary = int(raw_salary) if raw_salary.isdigit() else default_salary
+        raw_years = ask("Años de contrato (Enter = 3): ")
+        years = int(raw_years) if raw_years.isdigit() else 3
+        result = make_transfer_offer(self.state, player.id, fee, salary, years)
+        print("\n" + result["message"])
+        pause()
+
+    def market_offers(self):
+        s = self.state
+        offers = generate_incoming_offers(s)
+        header("OFERTAS RECIBIDAS")
+        if not offers:
+            print("No hay ofertas pendientes.")
+            pause()
+            return
+        for i, o in enumerate(offers, 1):
+            print(f"  {i}. {o['player_name']:<30} de {o['from_club_name']:<26} · {money(o['fee'])} · salario {money(o['salary'])} · {o['years']} años")
+        raw = ask("\nNúmero de oferta (Enter = volver): ")
+        if not raw.isdigit() or not (1 <= int(raw) <= len(offers)):
+            return
+        offer = offers[int(raw) - 1]
+        action = ask("[A] aceptar · [R] rechazar · Enter = volver: ").lower()
+        if action == "a":
+            result = accept_incoming_offer(s, offer["id"])
+            print("\n" + result["message"])
+        elif action == "r":
+            reject_incoming_offer(s, offer["id"])
+            print("\nOferta rechazada.")
+        pause()
+
+    def market_renewals(self):
+        s = self.state
+        t = s.user_team
+        players = sorted(t.players, key=lambda p: (p.contract_until, -p.overall))
+        header("RENOVAR CONTRATOS")
+        print(f"{'#':>3}  {'Jugador':<30} {'Pos':<9} {'Edad':>4} {'OVR':>5} {'Salario':>10} {'Contrato':<12}")
+        line()
+        for i, p in enumerate(players, 1):
+            print(f"{i:>3}  {short(p.name,30):<30} {p.subposition:<9} {p.age:>4} {p.overall:>5.1f} {money(p.salary):>10} {p.contract_until:<12}")
+        raw = ask("\nNúmero para renovar (Enter = volver): ")
+        if not raw.isdigit() or not (1 <= int(raw) <= len(players)):
+            return
+        player = players[int(raw) - 1]
+        default_salary = max(int(player.salary * 1.20), player.salary + 3000)
+        raw_salary = ask(f"Nuevo salario (Enter = {money(default_salary)}): ")
+        salary = int(raw_salary) if raw_salary.isdigit() else default_salary
+        raw_years = ask("Años (Enter = 3): ")
+        years = int(raw_years) if raw_years.isdigit() else 3
+        result = renew_contract(s, player.id, salary, years)
+        print("\n" + result["message"])
+        pause()
 
     # ------------------------------------------------------------- partido
     def matchday(self):
@@ -679,7 +736,7 @@ class GameUI:
             header(f"PREVIA · JORNADA {fx.round} · {fmt_date(fx.date)}")
             print(f"{home.name} vs {away.name}")
             print(f"Estadio: {home.stadium_name} · {home.city}")
-            pos = next((i for i, x in enumerate(dha_table(s.teams), 1) if x.id == rival.id), 0)
+            pos = next((i for i, x in enumerate(s.table(), 1) if x.id == rival.id), 0)
             print(f"Rival: {rival.name} · {pos}º · {rival.points} pts · GF {rival.goals_for} / GC {rival.goals_against} · Moral {rival.morale}/20")
             mg = t.management_profile()
             print(f"Tu gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión {t.cohesion}/20 · Mánager {t.manager_rating}/100")
@@ -1082,7 +1139,7 @@ class GameUI:
         payload = play_round(s, user_lineup_ids=None, travel_option_id="equilibrado")
         if payload:
             print(f"\nJ{payload['round']}: {payload['home_name']} {payload['home_goals']}-{payload['away_goals']} {payload['away_name']} · {payload['result']}")
-            table = dha_table(s.teams)
+            table = s.table()
             pos = next((i for i, t in enumerate(table, 1) if t.id == s.club_id), 0)
             print(f"Posición: {pos}º · {s.user_team.points} pts")
         pause()
@@ -1108,25 +1165,29 @@ class GameUI:
         s = self.state
         summ = season_summary(s)
         header(f"FIN DE TEMPORADA · {s.season}")
-        print(f"Campeón de DHA: {summ.get('champion') or '—'}")
-        print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/12")
+        print(f"Campeón de {summ.get('competition', s.competition)}: {summ.get('champion') or '—'}")
+        print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/{len(summ.get('table', []))}")
         mg = s.user_team.management_profile()
         print(f"Gestión final: {mg['score']:.1f}/100 (bonus {mg['bonus']:+.2f}) · Cohesión {s.user_team.cohesion}/20 · Mánager {s.user_team.manager_rating}/100")
         section("CLASIFICACIÓN FINAL")
         print(f"{'#':>3}  {'Equipo':<40} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         for row in summ.get("table", []):
             print(f"{row['position']:>3}  {short(row['team'],40):<40} {row['played']:>3} {row['won']:>3} {row['drawn']:>3} {row['lost']:>3} {row['gf']:>3} {row['ga']:>3} {row['gd']:>+4} {row['points']:>4}")
-        section("FINAL FOUR")
         f4 = summ.get("final4") or {}
-        for i, sf in enumerate(f4.get("semifinals", []), 1):
-            h = s.teams.get(sf.get("home_id"), None)
-            a = s.teams.get(sf.get("away_id"), None)
-            print(f"  SF{i}: {h.name if h else '—'} {sf.get('home_goals')}-{sf.get('away_goals')} {a.name if a else '—'} · pasa {s.teams[sf['winner_id']].name if sf.get('winner_id') in s.teams else '—'}")
-        fin = f4.get("final") or {}
-        if fin:
-            h = s.teams.get(fin.get("home_id"), None)
-            a = s.teams.get(fin.get("away_id"), None)
-            print(f"  FINAL: {h.name if h else '—'} {fin.get('home_goals')}-{fin.get('away_goals')} {a.name if a else '—'} · campeón {s.teams[f4['champion_id']].name if f4.get('champion_id') in s.teams else '—'}")
+        if f4.get("semifinals"):
+            section("FINAL FOUR")
+            for i, sf in enumerate(f4.get("semifinals", []), 1):
+                h = s.teams.get(sf.get("home_id"), None)
+                a = s.teams.get(sf.get("away_id"), None)
+                print(f"  SF{i}: {h.name if h else '—'} {sf.get('home_goals')}-{sf.get('away_goals')} {a.name if a else '—'} · pasa {s.teams[sf['winner_id']].name if sf.get('winner_id') in s.teams else '—'}")
+            fin = f4.get("final") or {}
+            if fin:
+                h = s.teams.get(fin.get("home_id"), None)
+                a = s.teams.get(fin.get("away_id"), None)
+                print(f"  FINAL: {h.name if h else '—'} {fin.get('home_goals')}-{fin.get('away_goals')} {a.name if a else '—'} · campeón {s.teams[f4['champion_id']].name if f4.get('champion_id') in s.teams else '—'}")
+        section("ASCENSOS Y DESCENSOS")
+        print(f"  Ascienden: {', '.join(summ.get('promoted', [])) or '—'}")
+        print(f"  Descienden: {', '.join(summ.get('relegated', [])) or '—'}")
         p = summ.get("playout") or {}
         if p:
             h = s.teams.get(p.get("home_id"), None)
@@ -1142,9 +1203,13 @@ class GameUI:
         section("MÁXIMOS GOLEADORES")
         for i, sc in enumerate(summ.get("top_scorers", [])[:10], 1):
             print(f"  {i:>2}. {sc['player']:<38} {sc['team']:<34} {sc['goals']:>3} goles · {sc['assists']:>2} asistencias")
-        print("\n  [G] Guardar partida   [N] Nueva partida   [S] Salir")
+        print("\n  [C] Continuar siguiente temporada   [G] Guardar partida   [N] Nueva partida   [S] Salir")
         op = ask("  > ").lower()
-        if op == "g":
+        if op == "c":
+            from .season import advance_to_next_season
+            advance_to_next_season(s)
+            self.dashboard()
+        elif op == "g":
             self.save_flow()
             self.season_end_screen()
         elif op == "n":

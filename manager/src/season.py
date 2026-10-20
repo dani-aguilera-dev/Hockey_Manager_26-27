@@ -9,7 +9,7 @@ from typing import Any
 
 from .models import GameState, Fixture, TeamState, PlayerState
 from .data_loader import load_teams
-from .calendar import create_dha_fixtures, recompute_table, dha_table
+from .calendar import create_dha_fixtures, create_fixtures, recompute_table, dha_table, league_table
 from .logistics import travel_options, apply_travel
 from .match_engine import MatchEngine, MatchResult
 from .training import auto_plan, apply_training_plan
@@ -33,6 +33,7 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
     fixtures = create_dha_fixtures(dha_ids, START_DATE)
     state = GameState(
         manager_name=manager_name, club_id=club_id, season="2026-27",
+        competition="DHA",
         seed=seed if seed is not None else random.randint(1, 999_999),
         round=1, date=fixtures[0].date, fixtures=fixtures, teams=teams,
     )
@@ -68,7 +69,7 @@ def ensure_ai_training(state: GameState) -> None:
     if state.phase != "regular" or state.ai_training_round == state.round:
         return
     for team in state.teams.values():
-        if team.league != "DHA" or team.id == state.club_id:
+        if team.league not in ("DHA", "DHB") or team.id == state.club_id:
             continue
         opponent = _opponent_for_team(state, team.id)
         rng = random.Random(state.seed * 1000 + state.round * 97 + zlib.crc32(team.id.encode("utf-8")) % 10000)
@@ -297,12 +298,11 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
-    if state.round <= 22:
+    if state.round <= state.total_rounds:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
         if next_fx:
             state.date = next_fx.date
     else:
-        state.date = "2027-04-10"
         finish_regular_season(state)
     return user_payload
 
@@ -422,12 +422,11 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
-    if state.round <= 22:
+    if state.round <= state.total_rounds:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
         if next_fx:
             state.date = next_fx.date
     else:
-        state.date = "2027-04-10"
         finish_regular_season(state)
     return user_payload
 
@@ -479,9 +478,35 @@ def _best_dhb_team(state: GameState) -> TeamState:
     return max(dhb, key=strength)
 
 
+def _background_table(state: GameState, league: str) -> list[dict]:
+    teams = [t for t in state.teams.values() if t.league == league]
+    if len(teams) < 2:
+        return []
+    ids = sorted(t.id for t in teams)
+    fixtures = create_fixtures(ids, state.date)
+    rng = random.Random(state.seed + (17 if league == "DHA" else 23) + int(state.season[:4]))
+    rows = {t.id: {"team": t, "points": 0, "gf": 0, "ga": 0, "won": 0, "drawn": 0, "lost": 0} for t in teams}
+    for fx in fixtures:
+        h, a = rows[fx.home_id], rows[fx.away_id]
+        hl, _ = h["team"].auto_lineup()
+        al, _ = a["team"].auto_lineup()
+        ha, hd = h["team"].lineup_strength(hl)
+        aa, ad = a["team"].lineup_strength(al)
+        hg = max(0, int(rng.gauss(2.4 + (ha + 4 - ad) / 14, 1.4)))
+        ag = max(0, int(rng.gauss(2.2 + (aa - hd) / 14, 1.4)))
+        h["gf"] += hg; h["ga"] += ag; a["gf"] += ag; a["ga"] += hg
+        if hg > ag:
+            h["points"] += 3; h["won"] += 1; a["lost"] += 1
+        elif hg < ag:
+            a["points"] += 3; a["won"] += 1; h["lost"] += 1
+        else:
+            h["points"] += 1; a["points"] += 1; h["drawn"] += 1; a["drawn"] += 1
+    return sorted(rows.values(), key=lambda r: (-r["points"], -(r["gf"] - r["ga"]), -r["gf"], r["team"].name))
+
+
 def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) -> dict:
-    """Simula semifinales, final y playout. Se llama automáticamente al acabar la liga."""
-    table = dha_table(state.teams)
+    """Simula semifinales, final y playout de DHA."""
+    table = league_table(state.teams, "DHA")
     if len(table) < 12:
         return {}
     semis = [(table[0], table[3]), (table[1], table[2])]
@@ -520,7 +545,6 @@ def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) 
     }
     if state.club_id in (final.home_id, final.away_id):
         state.last_result = _user_result_payload(state, final, res, None)
-    # playout: 11º DHA vs mejor DHB (representante, modelo)
     eleventh = table[10]
     dhb = _best_dhb_team(state)
     playout = {}
@@ -541,39 +565,74 @@ def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) 
             "shootout": res.shootout, "winner_id": winner_id,
             "stays_id": stays_id, "promoted_id": promoted_id, "relegated_id": relegated_id,
             "direct_relegated_id": table[11].id,
-            "note": "El representante DHB se elige por potencial de plantilla (modelo Fase 1).",
+            "note": "El representante DHB se elige por potencial de plantilla (modelo).",
         }
         if state.club_id in (eleventh.id, dhb.id):
             state.last_result = _user_result_payload(state, fx, res, None)
     state.playout = playout
-    state.phase = "season_end"
-    state.history.append(season_summary(state))
-    state.inbox.append({
-        "date": "2027-04-18", "from": "Prensa",
-        "subject": "Fin de la temporada 2026-27",
-        "body": f"Campeón: {state.teams[champion_id].name}. Consulta el resumen de temporada en la oficina del club.",
-    })
     return state.final4
 
 
 def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = None) -> None:
-    play_final_four(state, user_lineup_ids)
-    state.date = "2027-06-30"
+    if state.competition == "DHA":
+        play_final_four(state, user_lineup_ids)
+        table = league_table(state.teams, "DHA")
+        dhb_rows = _background_table(state, "DHB")
+        p = state.playout or {}
+        if p.get("promoted_id"):
+            # El playout lo gana un equipo DHB: sube el campeón DHB y el ganador del playout.
+            promoted = [dhb_rows[0]["team"].id] if dhb_rows else []
+            if p["promoted_id"] not in promoted:
+                promoted.append(p["promoted_id"])
+            for row in dhb_rows:
+                if len(promoted) >= 2:
+                    break
+                if row["team"].id not in promoted:
+                    promoted.append(row["team"].id)
+            relegated = [table[10].id, table[11].id] if len(table) >= 12 else []
+        else:
+            # El 11º se mantiene: solo baja el 12º y sube el campeón DHB.
+            promoted = [dhb_rows[0]["team"].id] if dhb_rows else []
+            relegated = [table[11].id] if len(table) >= 12 else []
+        state.promoted_ids = list(dict.fromkeys(promoted))
+        state.relegated_ids = list(dict.fromkeys(relegated))
+    else:
+        table = league_table(state.teams, state.competition)
+        dha_rows = _background_table(state, "DHA")
+        state.promoted_ids = [t.id for t in table[:2]]
+        state.relegated_ids = [r["team"].id for r in dha_rows[-2:]]
+        state.final4 = {}
+        state.playout = {}
+    state.phase = "season_end"
+    state.date = f"{int(state.season[:4]) + 1}-06-30"
+    state.history.append(season_summary(state))
+    champ = season_summary(state).get("champion") or "—"
+    state.inbox.append({
+        "date": state.date, "from": "Prensa",
+        "subject": f"Fin de la temporada {state.season}",
+        "body": f"Campeón: {champ}. Consulta el resumen de temporada y decide si continúas el proyecto.",
+    })
 
 
 def season_summary(state: GameState) -> dict:
-    table = dha_table(state.teams)
+    table = league_table(state.teams, state.competition)
     scorers = []
     for t in state.teams.values():
-        if t.league == "DHA":
+        if t.league == state.competition:
             for p in t.players:
                 if p.season_goals:
                     scorers.append({"player": p.name, "team": t.name, "goals": p.season_goals, "assists": p.season_assists})
     scorers.sort(key=lambda x: (-x["goals"], -x["assists"], x["player"]))
-    champion = state.final4.get("champion_id")
+    if state.competition == "DHA":
+        champion_id = state.final4.get("champion_id")
+    else:
+        champion_id = table[0].id if table else None
+    promoted_names = [state.teams[i].name for i in state.promoted_ids if i in state.teams]
+    relegated_names = [state.teams[i].name for i in state.relegated_ids if i in state.teams]
     return {
         "season": state.season,
-        "champion": state.teams[champion].name if champion in state.teams else None,
+        "competition": state.competition,
+        "champion": state.teams[champion_id].name if champion_id in state.teams else None,
         "user_club": state.user_team.name,
         "user_position": next((i for i, t in enumerate(table, 1) if t.id == state.club_id), None),
         "table": [{"position": i, "team": t.name, "points": t.points, "played": t.played,
@@ -583,5 +642,94 @@ def season_summary(state: GameState) -> dict:
         "top_scorers": scorers[:10],
         "final4": state.final4,
         "playout": state.playout,
+        "promoted": promoted_names,
+        "relegated": relegated_names,
         "direct_relegated": state.teams[state.playout["direct_relegated_id"]].name if state.playout.get("direct_relegated_id") in state.teams else None,
     }
+
+
+def _youth_player(team: TeamState, rng: random.Random, seq: int, new_year: int) -> PlayerState:
+    pos = rng.choice(["Portero", "Central", "Lateral", "Medio", "Delantero"])
+    group = "Portero" if pos == "Portero" else ("Defensa" if pos in ("Central", "Lateral") else pos)
+    keys = ["control", "pase", "conduccion", "golpeo", "flick", "regate_3d", "definicion",
+            "aerial", "pc_injection", "pc_trap", "pc_flick", "pc_deflection", "pc_first_runner",
+            "pc_gk_save", "stroke_shot", "stroke_save", "free_hit", "posicionamiento", "pressing",
+            "cobertura", "transicion", "desmarque", "velocidad", "resistencia", "fuerza", "agilidad",
+            "coordinacion", "decisiones", "concentracion", "competitividad", "liderazgo", "reflejos",
+            "blocaje", "distribucion", "uno_vs_uno", "alto", "rebote_gk"]
+    attrs = {k: rng.randint(40, 64) for k in keys}
+    overall = round(rng.uniform(48, 62), 1)
+    return PlayerState(
+        id=f"{team.id}-youth-{new_year}-{seq}", name=f"Canterano {seq}", team_name=team.name,
+        position_group=group, subposition=pos, age=rng.randint(18, 21),
+        overall=overall, potential=round(overall + rng.uniform(6, 18), 1), attributes=attrs,
+        archetype="Canterano", perfil="Jugador", goals_isquad=0,
+        value=int(overall * 5000), polivalencia=0.0,
+        salary=int(rng.uniform(8000, 16000)), contract_until=f"{new_year + 2}-06-30",
+    )
+
+
+def advance_to_next_season(state: GameState) -> None:
+    """Cierra la temporada y prepara la siguiente, con ascensos y descensos."""
+    if state.phase != "season_end":
+        return
+    new_year = int(state.season[:4]) + 1
+    for tid in state.promoted_ids:
+        if tid in state.teams:
+            state.teams[tid].league = "DHA"
+    for tid in state.relegated_ids:
+        if tid in state.teams:
+            state.teams[tid].league = "DHB"
+    rng = random.Random(state.seed + new_year * 100)
+    for team in state.teams.values():
+        if team.league not in ("DHA", "DHB"):
+            continue
+        kept = []
+        for p in team.players:
+            p.age += 1
+            expired = int(p.contract_until[:4]) <= new_year
+            if p.age >= 37 or expired:
+                continue
+            p.apps = p.season_goals = p.season_assists = 0
+            p.rating_sum = 0.0
+            p.fatigue = 0
+            p.injury = 0
+            p.suspension = 0
+            p.form = 6.5
+            kept.append(p)
+        team.players = kept
+        while len(team.players) < 18:
+            team.players.append(_youth_player(team, rng, len(team.players) + 1, new_year))
+        team.played = team.won = team.drawn = team.lost = 0
+        team.goals_for = team.goals_against = team.points = 0
+        team.finance_log = []
+        team.prep_bonus = 0.0
+        team.last_lineup = []
+        team.cohesion = 12
+    state.competition = state.user_team.league
+    ids = sorted(t.id for t in state.teams.values() if t.league == state.competition)
+    start = date.fromisoformat(state.fixtures[0].date) + timedelta(days=364)
+    fixtures = create_fixtures(ids, start.isoformat())
+    state.season = f"{new_year}-{str(new_year + 1)[-2:]}"
+    state.fixtures = fixtures
+    state.round = 1
+    state.date = fixtures[0].date
+    state.phase = "regular"
+    state.final4 = {}
+    state.playout = {}
+    state.last_result = {}
+    state.manual_lineup = []
+    state.week_trained = False
+    state.weekly_plan = []
+    state.training_report = {}
+    state.ai_training_round = 0
+    state.finance_round = 0
+    state.transfer_offers = []
+    state.market_offers_round = 0
+    state.promoted_ids = []
+    state.relegated_ids = []
+    state.inbox.append({
+        "date": state.date, "from": "Junta Directiva",
+        "subject": f"Temporada {state.season} · {state.competition}",
+        "body": f"Comienza una nueva temporada en {state.competition}. Revisa plantilla, contratos y mercado de verano.",
+    })

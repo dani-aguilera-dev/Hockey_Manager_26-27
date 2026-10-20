@@ -20,6 +20,8 @@
 - Planificar el **entrenamiento semanal** o delegarlo en el segundo entrenador, con plan automático y editor de sesiones.
 - Consultar **staff y junta directiva**, con efectos reales del staff en entrenamiento y charla.
 - Gestionar **finanzas**: caja, presupuesto de fichajes, salarios, patrocinio, taquilla y viajes.
+- Usar el **mercado**: buscar jugadores, hacer ofertas, renovar contratos, contratar/despedir staff y recibir ofertas.
+- Continuar **varias temporadas**, con ascensos, descensos y DHA/DHB.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -58,7 +60,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **30 tests superados**.
+Resultado esperado: **36 tests superados**.
 
 ---
 
@@ -240,6 +242,7 @@ Al terminar la jornada 22:
 - `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo, recompensa de gestión, charla de vestuario y IA reactiva.
 - `test_training.py`: plan automático, recuperación, entrenamiento semanal, IA y guardado del estado.
 - `test_staff_finance.py`: staff, junta, salarios, cierre financiero y resumen.
+- `test_market.py`: ventanas, fichajes, contratos, staff, ofertas y multi-temporada.
 
 Comando:
 
@@ -256,7 +259,8 @@ python3 -m pytest src/tests -q
 - Final Four y playout se simulan automáticamente; no tienen previa interactiva.
 - No se puede guardar la partida en mitad del partido.
 - El entrenamiento es semanal y grupal; no hay sesiones individuales, mercado, cantera, prensa ni multi-temporada.
-- No hay contratación/despido de staff ni mercado de fichajes.
+- El mercado no incluye cesiones, cláusulas, agentes ni primas por objetivos.
+- La DHB de multi-temporada es una liga simplificada de 16 equipos.
 - Parte del staff y de la junta son nombres de modelo, no datos oficiales.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
 - La IA de viaje usa equilibrado/barato; no negocia hoteles ni vuelos.
@@ -279,6 +283,8 @@ python3 -m pytest src/tests -q
 | Entrenamiento semanal con plan automático | Cumplido |
 | Staff con efectos y junta directiva | Cumplido |
 | Finanzas de jornada y salarios | Cumplido |
+| Mercado, contratos y staff | Cumplido |
+| Multi-temporada DHA/DHB | Cumplido (DHB simplificada) |
 | Sin errores de consola | Cumplido en pruebas y simulación |
 
 ---

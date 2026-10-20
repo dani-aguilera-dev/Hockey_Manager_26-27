@@ -127,6 +127,7 @@ class PlayerState:
     apps: int = 0
     rating_sum: float = 0.0
     salary: int = 0
+    contract_until: str = "2028-06-30"
 
     @property
     def available(self) -> bool:
@@ -475,6 +476,7 @@ class GameState:
     date: str
     fixtures: list[Fixture]
     teams: dict[str, TeamState]
+    competition: str = "DHA"
     phase: str = "regular"
     final4: dict[str, Any] = field(default_factory=dict)
     playout: dict[str, Any] = field(default_factory=dict)
@@ -487,13 +489,23 @@ class GameState:
     training_report: dict[str, Any] = field(default_factory=dict)
     ai_training_round: int = 0
     finance_round: int = 0
+    transfer_offers: list[dict[str, Any]] = field(default_factory=list)
+    market_history: list[dict[str, Any]] = field(default_factory=list)
+    market_offers_round: int = 0
+    promoted_ids: list[str] = field(default_factory=list)
+    relegated_ids: list[str] = field(default_factory=list)
+
+    @property
+    def total_rounds(self) -> int:
+        n = len([t for t in self.teams.values() if t.league == self.competition])
+        return max(2, 2 * (n - 1)) if n else 22
 
     @property
     def user_team(self) -> TeamState:
         return self.teams[self.club_id]
 
     def table(self) -> list[TeamState]:
-        teams = [t for t in self.teams.values() if t.league == "DHA"]
+        teams = [t for t in self.teams.values() if t.league == self.competition]
         return sorted(teams, key=lambda t: (-t.points, -(t.goals_for - t.goals_against), -t.goals_for, t.name))
 
     def user_position(self) -> int:
@@ -514,6 +526,7 @@ class GameState:
             "manager_name": self.manager_name,
             "club_id": self.club_id,
             "season": self.season,
+            "competition": self.competition,
             "seed": self.seed,
             "round": self.round,
             "date": self.date,
@@ -531,12 +544,18 @@ class GameState:
             "training_report": self.training_report,
             "ai_training_round": self.ai_training_round,
             "finance_round": self.finance_round,
+            "transfer_offers": self.transfer_offers,
+            "market_history": self.market_history,
+            "market_offers_round": self.market_offers_round,
+            "promoted_ids": self.promoted_ids,
+            "relegated_ids": self.relegated_ids,
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> "GameState":
         return cls(
             manager_name=d["manager_name"], club_id=d["club_id"], season=d["season"],
+            competition=d.get("competition", "DHA"),
             seed=d["seed"], round=d["round"], date=d["date"],
             fixtures=[Fixture.from_dict(f) for f in d["fixtures"]],
             teams={k: TeamState.from_dict(v) for k, v in d["teams"].items()},
@@ -549,4 +568,9 @@ class GameState:
             training_report=d.get("training_report", {}),
             ai_training_round=d.get("ai_training_round", 0),
             finance_round=d.get("finance_round", 0),
+            transfer_offers=d.get("transfer_offers", []),
+            market_history=d.get("market_history", []),
+            market_offers_round=d.get("market_offers_round", 0),
+            promoted_ids=d.get("promoted_ids", []),
+            relegated_ids=d.get("relegated_ids", []),
         )

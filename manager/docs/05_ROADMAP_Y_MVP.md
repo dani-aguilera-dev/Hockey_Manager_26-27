@@ -102,6 +102,8 @@ Añade:
 
 ### Fase 3 — Mercado y mundo
 
+**Estado:** implementada (2026-10-20). Ver `11_FASE3_MERCADO_Y_MULTITEMPORADA.md`.
+
 Añade:
 
 - Ventanas de fichajes.
