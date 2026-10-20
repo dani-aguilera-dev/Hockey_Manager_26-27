@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-10-20 — Modo directo y recompensa a la gestión
+
+### Añadido
+
+- Partido en directo en el juego de gestión:
+  - avance por cuartos o minuto a minuto;
+  - comentario y estadísticas en vivo;
+  - consulta de jugadores propios y rivales;
+  - cambios manuales (hasta 5);
+  - cambios de táctica en cualquier pausa;
+  - simulación rápida del resto del partido.
+- Sistema interno de **gestión (0-100)**:
+  - moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager;
+  - bonus de ataque/defensa de hasta ±7 puntos;
+  - bonus de lectura táctica de hasta +3;
+  - bonus de banquillo por cambios con criterio;
+  - rating del mánager que sube con resultados y victorias contra equipos superiores.
+- `manager/docs/08_MODO_DIRECTO_Y_GESTION.md`.
+- Tests `test_live_match.py`.
+
+### Cambiado
+
+- `MatchEngine` permite `advance_quarter()`, `advance_moment()` y `manual_substitute()` sin romper la simulación completa.
+- La gestión y la táctica se recalculan en cada momento del partido.
+- El dashboard y los partes muestran gestión, cohesión, mánager y bonus.
+- `manager/README.md` y `README.md` actualizados.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 18 tests superados.
+
+---
+
 ## 2026-10-20 — Fase 1 del juego de gestión (DHA)
 
 ### Añadido

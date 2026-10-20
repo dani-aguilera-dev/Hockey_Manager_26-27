@@ -14,7 +14,9 @@
 - Configurar táctica: formación, mentalidad, presión, bloque, anchura, tempo, pase y rutina de PC.
 - Elegir once automático o manual.
 - Jugar la temporada regular: 22 jornadas, 132 partidos, ida y vuelta.
+- Jugar el partido en **directo**: cuarto a cuarto o minuto a minuto, con estadísticas, jugadores, cambios y táctica en vivo.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
+- Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
 - Consultar clasificación, calendario, finanzas y estado físico.
 - Guardar y cargar la partida en SQLite.
@@ -51,7 +53,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **12 tests superados**.
+Resultado esperado: **18 tests superados**.
 
 ---
 
@@ -82,7 +84,8 @@ Menú principal
 4. Confirmación.
 5. Simulación de los 64 momentos de juego.
 6. Comentario por cuartos, estadísticas, ratings e incidencias.
-7. Actualización de clasificación, fatiga, moral, presupuesto y confianza.
+7. En modo directo: pausas para ver estadísticas/jugadores, cambiar táctica o hacer cambios.
+8. Actualización de clasificación, fatiga, moral, presupuesto, confianza y gestión.
 
 ---
 
@@ -229,6 +232,7 @@ Al terminar la jornada 22:
 - `test_persistence.py`: SQLite y JSON.
 - `test_models.py`: autoalineación, formaciones y modificadores.
 - `test_season.py`: temporada completa, Final Four, playout y once manual.
+- `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo y recompensa de gestión.
 
 Comando:
 
@@ -243,6 +247,7 @@ python3 -m pytest src/tests -q
 
 - Solo DHA; DHB y 1ª Andaluza no tienen liga simulada.
 - Final Four y playout se simulan automáticamente; no tienen previa interactiva.
+- No se puede guardar la partida en mitad del partido.
 - No hay entrenamiento, mercado, cantera, staff, prensa ni multi-temporada.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
 - La IA de viaje usa equilibrado/barato; no negocia hoteles ni vuelos.
@@ -260,11 +265,20 @@ python3 -m pytest src/tests -q
 | Clasificación y calendario | Cumplido |
 | Viaje → fatiga → rendimiento | Cumplido |
 | Guardado y carga | Cumplido |
+| Partido en directo con decisiones | Cumplido |
+| La gestión influye en el rendimiento | Cumplido |
 | Sin errores de consola | Cumplido en pruebas y simulación |
 
 ---
 
-## 12. Siguiente fase recomendada
+## 12. Modo directo y gestión
+
+El detalle de controles, componentes de gestión y lectura táctica está en
+[`08_MODO_DIRECTO_Y_GESTION.md`](08_MODO_DIRECTO_Y_GESTION.md).
+
+---
+
+## 13. Siguiente fase recomendada
 
 1. Entrenamiento semanal y desarrollo de atributos.
 2. Moral y dinámica de grupo.

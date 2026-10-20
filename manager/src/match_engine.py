@@ -53,7 +53,8 @@ class MatchEngine:
                  away_lineup: list[PlayerState] | None = None,
                  home_bench: list[PlayerState] | None = None,
                  away_bench: list[PlayerState] | None = None,
-                 detailed: bool = False):
+                 detailed: bool = False,
+                 auto_sub_sides: set[int] | None = None):
         self.home = home
         self.away = away
         self.rng = rng
@@ -66,6 +67,8 @@ class MatchEngine:
         self.away_bench = away_bench if away_bench is not None else away.auto_lineup()[1]
         self.home_spec = home.specialists(self.home_lineup)
         self.away_spec = away.specialists(self.away_lineup)
+        self.home_starters = list(self.home_lineup)
+        self.away_starters = list(self.away_lineup)
         self.played = {0: {p.id for p in self.home_lineup}, 1: {p.id for p in self.away_lineup}}
         self.score = [0, 0]
         self.events: list[dict[str, Any]] = []
@@ -73,6 +76,7 @@ class MatchEngine:
         self.quarter = 1
         self.zone = "middle"
         self.possession = 0  # 0 home, 1 away
+        self.possession_counts = [0, 0]
         self.stats = {
             0: self._empty_stats(), 1: self._empty_stats()
         }
@@ -84,6 +88,13 @@ class MatchEngine:
         self.injuries: list[dict[str, Any]] = []
         self.cards: list[dict[str, Any]] = []
         self._subs = {0: 0, 1: 0}
+        self.auto_sub_sides = set(auto_sub_sides) if auto_sub_sides is not None else {0, 1}
+        self.live_bonus = {0: 0.0, 1: 0.0}
+        self.prepared = False
+        self.finished = False
+        self.result: MatchResult | None = None
+        self.moment_in_quarter = 0
+        self.total_moments = 0
 
     @staticmethod
     def _empty_stats() -> dict[str, Any]:
@@ -116,11 +127,19 @@ class MatchEngine:
         if not self.neutral:
             ha += HOME_ADVANTAGE_ATTACK
             hd += HOME_ADVANTAGE_DEFENSE
-        # moral del equipo
-        ha += (self.home.morale - 10) * 0.5
-        hd += (self.home.morale - 10) * 0.5
-        aa += (self.away.morale - 10) * 0.5
-        ad += (self.away.morale - 10) * 0.5
+        # moral + gestión + lectura táctica + ajuste de banquillo
+        hm = self.home.management_bonus(self.home_lineup)
+        am = self.away.management_bonus(self.away_lineup)
+        ht = self.tactical_matchup_bonus(0)
+        at = self.tactical_matchup_bonus(1)
+        ha += hm + ht * 0.8 + self.live_bonus[0]
+        hd += hm + ht * 0.5 + self.live_bonus[0] * 0.5
+        aa += am + at * 0.8 + self.live_bonus[1]
+        ad += am + at * 0.5 + self.live_bonus[1] * 0.5
+        ha += (self.home.morale - 10) * 0.3
+        hd += (self.home.morale - 10) * 0.3
+        aa += (self.away.morale - 10) * 0.3
+        ad += (self.away.morale - 10) * 0.3
         return ha, hd, aa, ad
 
     def _add_event(self, type_: str, side: int | None, player: PlayerState | None, text: str, minute: int | None = None):
@@ -367,17 +386,17 @@ class MatchEngine:
         self._add_event("injury", side, p, f"{p.name} ({t.name}) se lesiona ({severity}); estará {matches} partido(s) de baja.")
 
     def _substitute(self, side: int):
+        if side not in self.auto_sub_sides:
+            return
         if self._subs[side] >= 5:
             return
         lineup = self._lineup(side)
         bench = self._bench(side)
         if not bench:
             return
-        # jugador más cansado que no sea portero
         tired = max([p for p in lineup if p.subposition != "Portero"] or lineup, key=lambda p: p.fatigue)
         if tired.fatigue < 55:
             return
-        # elegir suplente por slot fit
         slot = "MED"
         if tired.subposition in ("Central", "Lateral"):
             slot = "CEN" if tired.subposition == "Central" else "LAT"
@@ -389,166 +408,230 @@ class MatchEngine:
         if not candidates:
             return
         sub = candidates[0]
-        if not sub.available:
-            return
-        lineup[lineup.index(tired)] = sub
-        bench.remove(sub)
-        self._subs[side] += 1
-        self.played[side].add(sub.id)
-        self.player_stats.setdefault(sub.id, {"goals": 0, "assists": 0, "shots": 0, "saves": 0, "green": 0, "yellow": 0, "red": 0, "rating": 6.0})
-        self.player_minutes.setdefault(sub.id, 0)
-        self._add_event("substitution", side, sub, f"Cambio en {self._team(side).name}: entra {sub.name} por {tired.name}.")
+        self.manual_substitute(side, tired.id, sub.id, coaching=False)
 
     # ---------- bucle principal ----------
-    def simulate(self) -> MatchResult:
-        ha, hd, aa, ad = self._attack_defense()
-        # posesión base por medios/pase
+    def prepare(self):
+        self.prepared = True
+
+    def _possession_base(self) -> float:
         home_mid = _mean([p.attributes.get("pase", 50) + p.attributes.get("control", 50) for p in self.home_lineup]) / 2
         away_mid = _mean([p.attributes.get("pase", 50) + p.attributes.get("control", 50) for p in self.away_lineup]) / 2
-        base_home_pos = 0.5 + (home_mid - away_mid) / 220 + self.home.tactics.attack_mod() * 0.5 - self.away.tactics.defense_mod() * 0.5
-        base_home_pos = max(0.30, min(0.70, base_home_pos))
-        for quarter in range(1, 5):
-            self.quarter = quarter
-            for m in range(MOMENTS_PER_QUARTER):
-                self.minute = int((quarter - 1) * QUARTER_MINUTES + (m + 1) * (QUARTER_MINUTES / MOMENTS_PER_QUARTER))
-                # posesión
-                if self.zone == "middle" and self.rng.random() < 0.30:
-                    self.possession = 0 if self.rng.random() < base_home_pos else 1
-                side = self.possession
-                t = self._team(side)
-                opp = 1 - side
-                attack = ha if side == 0 else aa
-                defense = ad if side == 0 else hd
-                # fatiga por momento: ambos equipos están en el campo
-                for team_side, team_obj in ((0, self.home), (1, self.away)):
-                    fat_team = 0.35 + max(0, team_obj.tactics.fatigue_mod()) * 2.5
-                    for p in self._lineup(team_side):
-                        p.fatigue = min(100.0, p.fatigue + fat_team)
-                # actualizar minutos (solo una vez por minuto aproximado)
-                for p in self._lineup(side):
-                    self.player_minutes[p.id] = self.player_minutes.get(p.id, 0) + 1
-                # decisiones según zona
-                r = self.rng.random()
-                if self.zone == "own_23":
-                    if r < 0.58:
-                        # salida
-                        self._inc_stat(side, "passes")
-                        if self.rng.random() < 0.85:
-                            self._inc_stat(side, "passes_completed")
-                            self.zone = "middle"
-                        else:
-                            self.possession = opp
-                            self.zone = "attacking_23"
-                    elif r < 0.74:
-                        self._inc_stat(side, "aerials")
-                        self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} busca el aerial para superar la presión.")
-                        self.zone = "middle"
-                        if self.rng.random() < 0.30:
-                            self.possession = opp
-                    elif r < 0.87:
-                        self._foul(side)
-                    else:
-                        self._add_event("info", side, None, f"{t.name} circula la bola en su campo.")
-                        self.zone = "middle"
-                elif self.zone == "middle":
-                    if r < 0.44:
-                        self._inc_stat(side, "passes")
-                        success = self.rng.random() < (0.78 + (attack - defense) / 250)
-                        if success:
-                            self._inc_stat(side, "passes_completed")
-                            self.zone = "attacking_23" if self.rng.random() < 0.70 else "middle"
-                        else:
-                            self._inc_stat(opp, "tackles")
-                            self.possession = opp
-                    elif r < 0.56:
-                        self._inc_stat(side, "passes")
-                        if self.rng.random() < 0.75:
-                            self._inc_stat(side, "passes_completed")
-                            self.zone = "attacking_23"
-                        else:
-                            self.possession = opp
-                    elif r < 0.68:
-                        self._inc_stat(side, "aerials")
-                        self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} lanza un aerial para cambiar de carril.")
-                        if self.rng.random() < 0.60:
-                            self.zone = "attacking_23"
-                        else:
-                            self.possession = opp
-                    elif r < 0.77:
-                        self._add_event("three_d", side, self._lineup(side)[0], f"{self._lineup(side)[0].name} usa un 3D para superar el stick.")
-                        if self.rng.random() < 0.60:
-                            self.zone = "attacking_23"
-                        else:
-                            self.possession = opp
-                    elif r < 0.88:
-                        self._inc_stat(side, "tackles")
-                        self._add_event("tackle", side, self._lineup(side)[0], f"{self._lineup(side)[0].name} roba con un tackle limpio.")
-                        self.possession = side
-                    elif r < 0.96:
-                        self._foul(side)
-                    else:
-                        self._card(side)
-                elif self.zone == "attacking_23":
-                    if r < 0.34:
-                        self._inc_stat(side, "circle_entries")
-                        self._add_event("circle_entry", side, None, f"{t.name} entra al círculo con peligro.")
-                        self.zone = "circle"
-                    elif r < 0.55:
-                        self._penalty_corner(side)
-                    elif r < 0.73:
-                        self._shot(side, "open")
-                    elif r < 0.82:
-                        self._inc_stat(side, "aerials")
-                        self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} busca el segundo palo con un aerial.")
-                        self.zone = "circle" if self.rng.random() < 0.6 else "middle"
-                    elif r < 0.90:
-                        self._inc_stat(side, "passes")
-                        if self.rng.random() < 0.75:
-                            self._inc_stat(side, "passes_completed")
-                            self.zone = "circle" if self.rng.random() < 0.50 else "attacking_23"
-                        else:
-                            self.possession = opp
-                            self.zone = "middle"
-                    elif r < 0.97:
-                        self._foul(side)
-                    else:
-                        self._card(side)
-                else:  # circle
-                    if r < 0.44:
-                        self._shot(side, "open")
-                    elif r < 0.60:
-                        self._penalty_corner(side)
-                    elif r < 0.68:
-                        self._stroke(side)
-                    elif r < 0.84:
-                        self._shot(side, "deflection")
-                    elif r < 0.92:
-                        self._add_event("chance", side, self._lineup(side)[0], f"{t.name} genera una ocasión, pero la defensa despeja.")
-                        self.possession = opp
-                        self.zone = "middle"
-                    elif r < 0.96:
-                        self._foul(side)
-                    else:
-                        self._card(side)
-                # lesión y cambios
-                if self.rng.random() < 0.0018 * (1 + sum(p.fatigue for p in self._lineup(side)) / 300):
-                    self._injury(side)
-                if self.rng.random() < 0.08:
-                    self._substitute(side)
-            # descanso de cuarto: pequeña recuperación
-            for p in self.home_lineup + self.away_lineup:
-                p.fatigue = max(0.0, p.fatigue - 1.5)
-            if quarter < 4:
-                self._add_event("info", None, None, f"Final del {quarter}º cuarto: {self.home.name} {self.score[0]}-{self.score[1]} {self.away.name}.", minute=int(quarter * QUARTER_MINUTES))
-        # posesión aproximada
-        total_phases = 4 * MOMENTS_PER_QUARTER
-        self.stats[0]["possession"] = round(100 * (base_home_pos * 0.7 + 0.15), 1)
-        self.stats[1]["possession"] = round(100 - self.stats[0]["possession"], 1)
-        # shootout
+        base = 0.5 + (home_mid - away_mid) / 220 + self.home.tactics.attack_mod() * 0.5 - self.away.tactics.defense_mod() * 0.5
+        return max(0.30, min(0.70, base))
+
+    def tactical_matchup_bonus(self, side: int) -> float:
+        """Ventaja por leer la táctica rival (para UI y motor)."""
+        t = self._team(side).tactics
+        o = self._team(1 - side).tactics
+        b = 0.0
+        if o.mentality in ("ofensiva", "muy_ofensiva"):
+            if t.press in ("alta", "muy_alta"):
+                b += 1.5
+            if t.mentality in ("defensiva", "muy_defensiva"):
+                b += 1.0
+        if o.mentality in ("defensiva", "muy_defensiva"):
+            if t.mentality in ("ofensiva", "muy_ofensiva"):
+                b += 1.0
+            if t.tempo == "rapido":
+                b += 0.5
+        if o.press in ("alta", "muy_alta") and t.passing == "directo":
+            b += 1.0
+        if o.block == "bajo" and t.tempo == "rapido":
+            b += 1.0
+        if o.block == "alto" and t.passing in ("corto", "mixto"):
+            b += 0.5
+        return min(3.0, b)
+
+    def advance_moment(self) -> list[dict[str, Any]]:
+        """Avanza un momento de juego (~1,1 minutos) y devuelve los eventos nuevos."""
+        if self.finished:
+            return []
+        self.prepare()
+        if self.quarter > 4:
+            self.finalize()
+            return []
+        start = len(self.events)
+        m = self.moment_in_quarter
+        self.minute = int((self.quarter - 1) * QUARTER_MINUTES + (m + 1) * (QUARTER_MINUTES / MOMENTS_PER_QUARTER))
+        base_home_pos = self._possession_base()
+        ha, hd, aa, ad = self._attack_defense()
+        # posesión
+        if self.zone == "middle" and self.rng.random() < 0.30:
+            self.possession = 0 if self.rng.random() < base_home_pos else 1
+        side = self.possession
+        self.possession_counts[side] += 1
+        total_pos = self.possession_counts[0] + self.possession_counts[1]
+        if total_pos:
+            self.stats[0]["possession"] = round(100 * self.possession_counts[0] / total_pos, 1)
+            self.stats[1]["possession"] = round(100 - self.stats[0]["possession"], 1)
+        t = self._team(side)
+        opp = 1 - side
+        attack = ha if side == 0 else aa
+        defense = ad if side == 0 else hd
+        # fatiga por momento: ambos equipos están en el campo
+        for team_side, team_obj in ((0, self.home), (1, self.away)):
+            fat_team = 0.35 + max(0, team_obj.tactics.fatigue_mod()) * 2.5
+            for p in self._lineup(team_side):
+                p.fatigue = min(100.0, p.fatigue + fat_team)
+        # minutos para ambos equipos
+        for p in self.home_lineup + self.away_lineup:
+            self.player_minutes[p.id] = self.player_minutes.get(p.id, 0) + 1
+        # decisiones según zona
+        r = self.rng.random()
+        if self.zone == "own_23":
+            if r < 0.58:
+                # salida
+                self._inc_stat(side, "passes")
+                if self.rng.random() < 0.85:
+                    self._inc_stat(side, "passes_completed")
+                    self.zone = "middle"
+                else:
+                    self.possession = opp
+                    self.zone = "attacking_23"
+            elif r < 0.74:
+                self._inc_stat(side, "aerials")
+                self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} busca el aerial para superar la presión.")
+                self.zone = "middle"
+                if self.rng.random() < 0.30:
+                    self.possession = opp
+            elif r < 0.87:
+                self._foul(side)
+            else:
+                self._add_event("info", side, None, f"{t.name} circula la bola en su campo.")
+                self.zone = "middle"
+        elif self.zone == "middle":
+            if r < 0.44:
+                self._inc_stat(side, "passes")
+                success = self.rng.random() < (0.78 + (attack - defense) / 250)
+                if success:
+                    self._inc_stat(side, "passes_completed")
+                    self.zone = "attacking_23" if self.rng.random() < 0.70 else "middle"
+                else:
+                    self._inc_stat(opp, "tackles")
+                    self.possession = opp
+            elif r < 0.56:
+                self._inc_stat(side, "passes")
+                if self.rng.random() < 0.75:
+                    self._inc_stat(side, "passes_completed")
+                    self.zone = "attacking_23"
+                else:
+                    self.possession = opp
+            elif r < 0.68:
+                self._inc_stat(side, "aerials")
+                self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} lanza un aerial para cambiar de carril.")
+                if self.rng.random() < 0.60:
+                    self.zone = "attacking_23"
+                else:
+                    self.possession = opp
+            elif r < 0.77:
+                self._add_event("three_d", side, self._lineup(side)[0], f"{self._lineup(side)[0].name} usa un 3D para superar el stick.")
+                if self.rng.random() < 0.60:
+                    self.zone = "attacking_23"
+                else:
+                    self.possession = opp
+            elif r < 0.88:
+                self._inc_stat(side, "tackles")
+                self._add_event("tackle", side, self._lineup(side)[0], f"{self._lineup(side)[0].name} roba con un tackle limpio.")
+                self.possession = side
+            elif r < 0.96:
+                self._foul(side)
+            else:
+                self._card(side)
+        elif self.zone == "attacking_23":
+            if r < 0.34:
+                self._inc_stat(side, "circle_entries")
+                self._add_event("circle_entry", side, None, f"{t.name} entra al círculo con peligro.")
+                self.zone = "circle"
+            elif r < 0.55:
+                self._penalty_corner(side)
+            elif r < 0.73:
+                self._shot(side, "open")
+            elif r < 0.82:
+                self._inc_stat(side, "aerials")
+                self._add_event("aerial", side, self._lineup(side)[0], f"{t.name} busca el segundo palo con un aerial.")
+                self.zone = "circle" if self.rng.random() < 0.6 else "middle"
+            elif r < 0.90:
+                self._inc_stat(side, "passes")
+                if self.rng.random() < 0.75:
+                    self._inc_stat(side, "passes_completed")
+                    self.zone = "circle" if self.rng.random() < 0.50 else "attacking_23"
+                else:
+                    self.possession = opp
+                    self.zone = "middle"
+            elif r < 0.97:
+                self._foul(side)
+            else:
+                self._card(side)
+        else:  # circle
+            if r < 0.44:
+                self._shot(side, "open")
+            elif r < 0.60:
+                self._penalty_corner(side)
+            elif r < 0.68:
+                self._stroke(side)
+            elif r < 0.84:
+                self._shot(side, "deflection")
+            elif r < 0.92:
+                self._add_event("chance", side, self._lineup(side)[0], f"{t.name} genera una ocasión, pero la defensa despeja.")
+                self.possession = opp
+                self.zone = "middle"
+            elif r < 0.96:
+                self._foul(side)
+            else:
+                self._card(side)
+        # lesión y cambios automáticos
+        if self.rng.random() < 0.0018 * (1 + sum(p.fatigue for p in self._lineup(side)) / 300):
+            self._injury(side)
+        auto_sub_roll = self.rng.random()
+        if side in self.auto_sub_sides and auto_sub_roll < 0.08:
+            self._substitute(side)
+        self.moment_in_quarter += 1
+        self.total_moments += 1
+        if self.moment_in_quarter >= MOMENTS_PER_QUARTER:
+            self._end_quarter()
+        return self.events[start:]
+
+    def _end_quarter(self):
+        for p in self.home_lineup + self.away_lineup:
+            p.fatigue = max(0.0, p.fatigue - 1.5)
+        if self.quarter < 4:
+            self._add_event("info", None, None,
+                            f"Final del {self.quarter}º cuarto: {self.home.name} {self.score[0]}-{self.score[1]} {self.away.name}.",
+                            minute=int(self.quarter * QUARTER_MINUTES))
+        self.quarter += 1
+        self.moment_in_quarter = 0
+        if self.quarter > 4:
+            self.finalize()
+
+    def advance_quarter(self) -> list[dict[str, Any]]:
+        """Avanza el cuarto actual (o lo que quede de él) y devuelve sus eventos."""
+        if self.finished:
+            return []
+        self.prepare()
+        start = len(self.events)
+        q = self.quarter
+        while not self.finished and self.quarter == q:
+            self.advance_moment()
+        return self.events[start:]
+
+    def simulate(self) -> MatchResult:
+        self.prepare()
+        while not self.finished:
+            self.advance_quarter()
+        return self.result
+
+    def finalize(self) -> MatchResult | None:
+        if self.finished and self.result is not None:
+            return self.result
+        self.finished = True
+        total_pos = self.possession_counts[0] + self.possession_counts[1]
+        if total_pos:
+            self.stats[0]["possession"] = round(100 * self.possession_counts[0] / total_pos, 1)
+            self.stats[1]["possession"] = round(100 - self.stats[0]["possession"], 1)
         shootout = {}
         if self.knockout and self.score[0] == self.score[1]:
             shootout = self._shootout()
-        # ratings y estadísticas de todos los que han jugado (incluidos los sustituidos)
         home_ratings: dict[str, float] = {}
         away_ratings: dict[str, float] = {}
         for side, team, ratings in ((0, self.home, home_ratings), (1, self.away, away_ratings)):
@@ -566,12 +649,11 @@ class MatchEngine:
                 p.season_goals += st["goals"]
                 p.season_assists += st["assists"]
                 p.form = max(1.0, min(10.0, p.form * 0.85 + rating * 0.15))
-        # moral por resultado
         if self.score[0] > self.score[1]:
             self.home.morale = min(20, self.home.morale + 1); self.away.morale = max(1, self.away.morale - 1)
         elif self.score[1] > self.score[0]:
             self.away.morale = min(20, self.away.morale + 1); self.home.morale = max(1, self.home.morale - 1)
-        return MatchResult(
+        self.result = MatchResult(
             home_id=self.home.id, away_id=self.away.id,
             home_goals=self.score[0], away_goals=self.score[1],
             events=self.events, home_stats=self.stats[0], away_stats=self.stats[1],
@@ -579,6 +661,80 @@ class MatchEngine:
             injuries=self.injuries, cards=self.cards,
             player_minutes=self.player_minutes, shootout=shootout,
         )
+        return self.result
+
+    def live_snapshot(self) -> dict:
+        return {
+            "quarter": min(self.quarter, 4),
+            "minute": self.minute,
+            "score": list(self.score),
+            "finished": self.finished,
+            "home_stats": self.stats[0],
+            "away_stats": self.stats[1],
+            "home_management": self.home.management_profile(self.home_lineup),
+            "away_management": self.away.management_profile(self.away_lineup),
+            "home_tactical_bonus": round(self.tactical_matchup_bonus(0), 2),
+            "away_tactical_bonus": round(self.tactical_matchup_bonus(1), 2),
+        }
+
+    def player_live_rows(self, side: int) -> list[dict]:
+        rows = []
+        for p in self._lineup(side):
+            st = self.player_stats.get(p.id, {})
+            rows.append({
+                "id": p.id, "name": p.name, "position": p.subposition,
+                "minutes": self.player_minutes.get(p.id, 0),
+                "goals": st.get("goals", 0), "assists": st.get("assists", 0),
+                "shots": st.get("shots", 0), "saves": st.get("saves", 0),
+                "green": st.get("green", 0), "yellow": st.get("yellow", 0), "red": st.get("red", 0),
+                "rating": self._rating(p), "fatigue": round(p.fatigue, 1),
+                "injury": p.injury, "suspension": p.suspension,
+            })
+        return rows
+
+    def bench_live_rows(self, side: int) -> list[dict]:
+        rows = []
+        for p in self._bench(side):
+            rows.append({
+                "id": p.id, "name": p.name, "position": p.subposition,
+                "overall": p.overall, "fatigue": round(p.fatigue, 1),
+                "form": round(p.form, 1), "injury": p.injury, "suspension": p.suspension,
+            })
+        return rows
+
+    def manual_substitute(self, side: int, out_id: str, in_id: str, coaching: bool = True) -> tuple[bool, str]:
+        if self.finished:
+            return False, "El partido ha terminado."
+        if side not in (0, 1):
+            return False, "Equipo no válido."
+        if self._subs[side] >= 5:
+            return False, "No quedan cambios disponibles."
+        lineup = self._lineup(side)
+        bench = self._bench(side)
+        out = next((p for p in lineup if p.id == out_id), None)
+        inn = next((p for p in bench if p.id == in_id), None)
+        if out is None:
+            return False, "El jugador que sale no está en el campo."
+        if inn is None:
+            return False, "El jugador que entra no está en el banquillo."
+        if not inn.available:
+            return False, "El jugador que entra no está disponible."
+        lineup[lineup.index(out)] = inn
+        bench.remove(inn)
+        self._subs[side] += 1
+        self.played[side].add(inn.id)
+        self.player_stats.setdefault(inn.id, {"goals": 0, "assists": 0, "shots": 0, "saves": 0, "green": 0, "yellow": 0, "red": 0, "rating": 6.0})
+        self.player_minutes.setdefault(inn.id, 0)
+        if coaching:
+            gain = 0.0
+            if out.fatigue >= 45 and inn.fatigue < out.fatigue - 10:
+                gain = 0.6
+            elif out.fatigue >= 30:
+                gain = 0.3
+            self.live_bonus[side] = min(2.0, self.live_bonus[side] + gain)
+        self._add_event("substitution", side, inn,
+                        f"Cambio en {self._team(side).name}: entra {inn.name} por {out.name}.")
+        return True, f"Entra {inn.name} por {out.name}."
 
     def _shootout(self) -> dict:
         # 5 lanzadores + muerte súbita

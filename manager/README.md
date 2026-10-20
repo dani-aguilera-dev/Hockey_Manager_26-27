@@ -6,7 +6,7 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 
 - **Diseño:** completo en `docs/`.
 - **Datos:** 29 clubes, 16 ciudades, 976 perfiles, 37 atributos.
-- **Fase 1 (vertical slice):** implementada. Una temporada DHA jugable, con partidos de texto, logística, clasificación, Final Four, playout y guardado/carga.
+- **Fase 1 (vertical slice):** implementada. Una temporada DHA jugable, con partidos en directo, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
 - **Fases 2–4:** pendientes (entrenamiento, mercado, staff, multi-temporada, DHB completa).
 
 ## Inicio rápido
@@ -43,6 +43,8 @@ La Fase 1 incluye:
 - táctica, once automático y once manual;
 - calendario DHA de 22 jornadas y 132 partidos;
 - motor de partido por fases con comentario de texto;
+- **modo directo**: cuarto a cuarto o minuto a minuto, con estadísticas, jugadores, cambios y táctica en vivo;
+- **sistema de gestión**: moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager que otorgan un bonus de hasta ±7 puntos;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.
@@ -104,6 +106,7 @@ manager/
 6. [`docs/05_ROADMAP_Y_MVP.md`](docs/05_ROADMAP_Y_MVP.md) — fases, backlog y criterios de aceptación.
 7. [`docs/06_MODELO_DATOS.md`](docs/06_MODELO_DATOS.md) — tablas, atributos, eventos y guardado.
 8. [`docs/07_FASE1_IMPLEMENTACION.md`](docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor, pruebas y limitaciones de la Fase 1.
+9. [`docs/08_MODO_DIRECTO_Y_GESTION.md`](docs/08_MODO_DIRECTO_Y_GESTION.md) — partido en directo y recompensa a la buena gestión.
 
 ## Datos
 

@@ -143,6 +143,8 @@ class PlayerState:
             return 6.0
         if self.position_group == target:
             return 3.0
+        if target in ("Central", "Lateral") and self.position_group == "Defensa":
+            return 3.0
         if self.subposition == "Polivalente":
             return 2.0
         # Portero solo puede jugar de portero; los demás tienen penalización.
@@ -181,6 +183,9 @@ class TeamState:
     board_confidence: int = 60
     fan_confidence: int = 60
     morale: int = 12
+    cohesion: int = 12
+    manager_rating: int = 60
+    last_lineup: list[str] = field(default_factory=list)
     played: int = 0
     won: int = 0
     drawn: int = 0
@@ -216,7 +221,10 @@ class TeamState:
         # Primero porteros, luego el resto por slot.
         priority = sorted(slots, key=lambda s: (s != "POR", s))
         for slot in priority:
-            candidates = [p for p in pool if p.id not in used and p.selection_score(slot) > -20]
+            # Prioridad: jugador natural del puesto > mismo grupo > cualquier otro.
+            natural = [p for p in pool if p.id not in used and p.slot_fit(slot) >= 6]
+            group = [p for p in pool if p.id not in used and p.slot_fit(slot) >= 3]
+            candidates = natural or group or [p for p in pool if p.id not in used and p.slot_fit(slot) > -20]
             if not candidates:
                 candidates = [p for p in rotation if p.id not in used]
             if not candidates:
@@ -255,6 +263,44 @@ class TeamState:
         defense += self.tactics.defense_mod() * 100
         return max(25.0, attack), max(25.0, defense)
 
+    def management_profile(self, lineup: list[PlayerState] | None = None) -> dict:
+        """Puntuación interna de gestión (0-100) y sus componentes.
+
+        Premia moral, cohesión, descanso, confianza, encaje posicional y
+        trayectoria del entrenador. Se aplica como pequeño modificador de
+        ataque/defensa en el motor, para que una buena gestión pueda competir
+        contra plantillas superiores.
+        """
+        if lineup is None:
+            lineup = self.auto_lineup()[0]
+        if not lineup:
+            lineup = self.players[:11]
+        slots = FORMATION_SLOTS.get(self.tactics.formation, FORMATION_SLOTS["4-3-3"])
+        avg_fatigue = sum(p.fatigue for p in lineup) / max(1, len(lineup))
+        fits = [p.slot_fit(slots[i] if i < len(slots) else "MED") for i, p in enumerate(lineup)]
+        avg_fit = sum(fits) / len(fits) if fits else 0.0
+        comps = {
+            "moral": (self.morale - 10) * 2.0,
+            "cohesion": (self.cohesion - 10) * 1.5,
+            "fatiga": -avg_fatigue * 0.30,
+            "confianza": (((self.board_confidence + self.fan_confidence) / 2) - 50) * 0.15,
+            "encaje": (avg_fit - 2.0) * 1.5,
+            "entrenador": (self.manager_rating - 50) * 0.10,
+        }
+        score = max(0.0, min(100.0, 50.0 + sum(comps.values())))
+        bonus = max(-7.0, min(7.0, (score - 50.0) / 8.0))
+        comps["score"] = round(score, 1)
+        comps["bonus"] = round(bonus, 2)
+        comps["avg_fatigue"] = round(avg_fatigue, 1)
+        comps["avg_fit"] = round(avg_fit, 2)
+        return comps
+
+    def management_score(self, lineup: list[PlayerState] | None = None) -> float:
+        return self.management_profile(lineup)["score"]
+
+    def management_bonus(self, lineup: list[PlayerState] | None = None) -> float:
+        return self.management_profile(lineup)["bonus"]
+
     def specialists(self, lineup: list[PlayerState] | None = None) -> dict[str, PlayerState]:
         pool = lineup or self.auto_lineup()[0]
         if not pool:
@@ -290,6 +336,9 @@ class TeamState:
             "board_confidence": self.board_confidence,
             "fan_confidence": self.fan_confidence,
             "morale": self.morale,
+            "cohesion": self.cohesion,
+            "manager_rating": self.manager_rating,
+            "last_lineup": self.last_lineup,
             "played": self.played,
             "won": self.won,
             "drawn": self.drawn,
@@ -309,7 +358,9 @@ class TeamState:
             board_expectation=d.get("board_expectation", ""), preferred_mode=d.get("preferred_mode", ""),
             budget=d.get("budget", 0), wage_budget=d.get("wage_budget", 0),
             board_confidence=d.get("board_confidence", 60), fan_confidence=d.get("fan_confidence", 60),
-            morale=d.get("morale", 12), played=d.get("played", 0), won=d.get("won", 0),
+            morale=d.get("morale", 12), cohesion=d.get("cohesion", 12),
+            manager_rating=d.get("manager_rating", 60), last_lineup=d.get("last_lineup", []),
+            played=d.get("played", 0), won=d.get("won", 0),
             drawn=d.get("drawn", 0), lost=d.get("lost", 0),
             goals_for=d.get("goals_for", 0), goals_against=d.get("goals_against", 0),
             points=d.get("points", 0),

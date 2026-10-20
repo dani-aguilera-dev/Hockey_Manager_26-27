@@ -13,7 +13,8 @@ from .models import GameState, PlayerState, TeamState, FORMATION_SLOTS
 from .data_loader import load_clubs, load_teams, dha_teams
 from .calendar import dha_table
 from .logistics import travel_options
-from .season import new_game, play_round, make_lineup, season_summary, _best_dhb_team
+from .season import (new_game, play_round, make_lineup, season_summary,
+                    prepare_live_round, finish_live_round)
 from .persistence import DEFAULT_DB, save_game, load_game, list_saves
 
 W = 100
@@ -263,6 +264,8 @@ class GameUI:
         pos = next((i for i, x in enumerate(table, 1) if x.id == t.id), 0)
         print(f"Posición: {pos}º/12 · {t.points} pts · {t.played} PJ · {t.won}G {t.drawn}E {t.lost}P · GF {t.goals_for} / GC {t.goals_against}")
         print(f"Forma: {self.form_string()} · Moral: {t.morale}/20 · Junta: {t.board_confidence}/100 · Afición: {t.fan_confidence}/100")
+        mg = t.management_profile()
+        print(f"Gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión: {t.cohesion}/20 · Mánager: {t.manager_rating}/100")
         print(f"Presupuesto: {money(t.budget)} · Masa salarial: {money(t.wage_budget)}")
         inj = sum(1 for p in t.players if p.injury > 0)
         sus = sum(1 for p in t.players if p.suspension > 0)
@@ -529,6 +532,8 @@ class GameUI:
             print(f"Estadio: {home.stadium_name} · {home.city}")
             pos = next((i for i, x in enumerate(dha_table(s.teams), 1) if x.id == rival.id), 0)
             print(f"Rival: {rival.name} · {pos}º · {rival.points} pts · GF {rival.goals_for} / GC {rival.goals_against} · Moral {rival.morale}/20")
+            mg = t.management_profile()
+            print(f"Tu gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión {t.cohesion}/20 · Mánager {t.manager_rating}/100")
             line, bench = make_lineup(t, s.manual_lineup or None)
             section("ONCE INICIAL")
             slots = FORMATION_SLOTS.get(t.tactics.formation, FORMATION_SLOTS["4-3-3"])
@@ -536,7 +541,7 @@ class GameUI:
                 p = line[i] if i < len(line) else None
                 print(f"  {slot:<4} {p.name if p else '—':<36} " + (f"OVR {p.overall:>4.1f} · Fatiga {p.fatigue:>3.0f}%" if p else ""))
             print("\nBANQUILLO: " + ", ".join(p.name for p in bench[:7]))
-            print("\n[Enter] jugar   [M] elegir once manual   [T] táctica   [V] volver")
+            print("\n[Enter] jugar en directo   [R] simulación rápida   [M] once manual   [T] táctica   [V] volver")
             op = ask("  > ").lower()
             if op in ("v",):
                 return
@@ -548,9 +553,13 @@ class GameUI:
                 if ids:
                     s.manual_lineup = ids
                 continue
-            if op not in ("", "j"):
+            if op == "r":
+                live = False
+                break
+            if op not in ("", "j", "d"):
                 print("Opción no válida.")
                 continue
+            live = True
             break
         # viaje
         travel_id = None
@@ -574,6 +583,9 @@ class GameUI:
         confirm = ask("\n¿Jugar el partido? (s/n): ").lower()
         if confirm not in ("s", "si", "sí", ""):
             return
+        if live:
+            self.live_match(travel_id)
+            return
         payload = play_round(s, user_lineup_ids=s.manual_lineup or None, travel_option_id=travel_id)
         if not payload:
             print("No se pudo simular el partido.")
@@ -581,6 +593,243 @@ class GameUI:
             return
         self.print_match_report(payload)
         pause()
+
+    # ------------------------------------------------------------- partido en directo
+    def live_match(self, travel_id: str | None):
+        s = self.state
+        try:
+            ctx = prepare_live_round(s, user_lineup_ids=s.manual_lineup or None,
+                                     travel_option_id=travel_id)
+        except Exception as e:
+            print(f"No se pudo preparar el partido en directo: {e}")
+            pause()
+            return
+        engine = ctx.engine
+        home = s.teams[ctx.fixture.home_id]
+        away = s.teams[ctx.fixture.away_id]
+        user_side = ctx.user_side
+        header(f"PARTIDO EN DIRECTO · {home.name.upper()} vs {away.name.upper()}")
+        print(f"{fmt_date(ctx.fixture.date)} · Jornada {ctx.fixture.round} · {home.stadium_name}")
+        print("El resto de la jornada ya se ha simulado. Tu partido se juega ahora.")
+        print("Controles: Enter = avanzar · M = minuto a minuto · E = estadísticas · J = jugadores")
+        print("           T = táctica · S = cambio · A = simular resto")
+        mode = "quarter"
+        while not engine.finished:
+            if engine.moment_in_quarter == 0:
+                self.live_score_line(engine)
+                op = ask("\n[Enter] cuarto completo · [M] minuto a minuto · [E] stats · [J] jugadores · [T] táctica · [S] cambio · [A] resto: ").lower()
+                if op == "m":
+                    mode = "moment"
+                elif op == "e":
+                    self.live_stats(ctx)
+                    continue
+                elif op == "j":
+                    self.live_players(ctx)
+                    continue
+                elif op == "t":
+                    self.live_tactics(ctx)
+                    continue
+                elif op == "s":
+                    self.live_substitution(ctx)
+                    continue
+                elif op == "a":
+                    while not engine.finished:
+                        engine.advance_quarter()
+                    break
+                else:
+                    mode = "quarter"
+            if mode == "moment":
+                events = engine.advance_moment()
+                self.live_events(events)
+                if engine.finished:
+                    break
+                self.live_score_line(engine)
+                if engine.moment_in_quarter == 0:
+                    self.live_quarter_summary(engine)
+                    continue
+                while True:
+                    op = ask("\n[Enter] siguiente · [C] cuarto completo · [E] stats · [J] jugadores · [T] táctica · [S] cambio · [A] resto: ").lower()
+                    if op in ("", "n", "siguiente"):
+                        break
+                    if op == "c":
+                        mode = "quarter"
+                        break
+                    if op == "e":
+                        self.live_stats(ctx)
+                        continue
+                    if op == "j":
+                        self.live_players(ctx)
+                        continue
+                    if op == "t":
+                        self.live_tactics(ctx)
+                        continue
+                    if op == "s":
+                        self.live_substitution(ctx)
+                        continue
+                    if op == "a":
+                        while not engine.finished:
+                            engine.advance_quarter()
+                        break
+                    print("Opción no válida.")
+                if engine.finished:
+                    break
+                continue
+            # modo cuarto
+            events = engine.advance_quarter()
+            self.live_events(events)
+            if not engine.finished:
+                self.live_quarter_summary(engine)
+        payload = finish_live_round(s, ctx)
+        self.print_match_report(payload)
+        pause()
+
+    def live_score_line(self, engine):
+        home = self.state.teams[engine.home.id]
+        away = self.state.teams[engine.away.id]
+        if engine.finished:
+            print(f"\n  FINAL · {home.name} {engine.score[0]}-{engine.score[1]} {away.name}")
+        else:
+            q = min(engine.quarter, 4)
+            print(f"\n  {home.name} {engine.score[0]}-{engine.score[1]} {away.name} · {q}º cuarto · {engine.minute}'")
+
+    def live_events(self, events: list[dict]):
+        key_types = {"goal", "pc", "stroke", "save", "card", "injury", "substitution", "chance", "circle_entry"}
+        prefix = {"goal": ">>> ", "save": "  ! ", "card": "  # ", "injury": "  + ", "substitution": "  -> ", "pc": "  PC ", "stroke": "  ST "}
+        shown = False
+        for e in events:
+            if e.get("type") not in key_types:
+                continue
+            shown = True
+            print(f"  {e.get('minute', 0):02d}' {prefix.get(e.get('type'), '  · ')}{e.get('text', '')}")
+        if not shown:
+            return
+
+    def live_quarter_summary(self, engine):
+        q = max(1, engine.quarter - 1)
+        home = self.state.teams[engine.home.id]
+        away = self.state.teams[engine.away.id]
+        section(f"FIN DEL {q}º CUARTO · {home.name} {engine.score[0]}-{engine.score[1]} {away.name}")
+        hs, as_ = engine.stats[0], engine.stats[1]
+        print(f"  Posesión {hs.get('possession', 0)}%-{as_.get('possession', 0)}% · Tiros {hs.get('shots', 0)}-{as_.get('shots', 0)} · PC {hs.get('pc', 0)}-{as_.get('pc', 0)} · Paradas {hs.get('saves', 0)}-{as_.get('saves', 0)}")
+        hm = home.management_profile(engine.home_lineup)
+        am = away.management_profile(engine.away_lineup)
+        print(f"  Gestión local {hm['score']:.0f}/100 ({hm['bonus']:+.1f}) · visitante {am['score']:.0f}/100 ({am['bonus']:+.1f})")
+        print(f"  Lectura táctica: local +{engine.tactical_matchup_bonus(0):.1f} · visitante +{engine.tactical_matchup_bonus(1):.1f}")
+
+    def live_stats(self, ctx):
+        engine = ctx.engine
+        home = self.state.teams[engine.home.id]
+        away = self.state.teams[engine.away.id]
+        header("ESTADÍSTICAS EN DIRECTO")
+        self.live_score_line(engine)
+        hs, as_ = engine.stats[0], engine.stats[1]
+        rows = [
+            ("Posesión", f"{hs.get('possession', 0)}%", f"{as_.get('possession', 0)}%"),
+            ("Tiros", hs.get("shots", 0), as_.get("shots", 0)),
+            ("Tiros a puerta", hs.get("shots_on_target", 0), as_.get("shots_on_target", 0)),
+            ("Penalty corners", hs.get("pc", 0), as_.get("pc", 0)),
+            ("Goles de PC", hs.get("pc_goals", 0), as_.get("pc_goals", 0)),
+            ("Strokes", hs.get("strokes", 0), as_.get("strokes", 0)),
+            ("Paradas", hs.get("saves", 0), as_.get("saves", 0)),
+            ("Tarjetas V/A/R", f"{hs.get('green',0)}/{hs.get('yellow',0)}/{hs.get('red',0)}", f"{as_.get('green',0)}/{as_.get('yellow',0)}/{as_.get('red',0)}"),
+            ("Entradas al círculo", hs.get("circle_entries", 0), as_.get("circle_entries", 0)),
+            ("Pases completados", f"{hs.get('passes_completed',0)}/{hs.get('passes',0)}", f"{as_.get('passes_completed',0)}/{as_.get('passes',0)}"),
+        ]
+        print(f"{'Estadística':<24} {short(home.name,28):>28} {short(away.name,28):>28}")
+        for label, hv, av in rows:
+            print(f"{label:<24} {str(hv):>28} {str(av):>28}")
+        hm = home.management_profile(engine.home_lineup)
+        am = away.management_profile(engine.away_lineup)
+        print(f"\nGestión local: {hm['score']:.0f}/100 · bonus {hm['bonus']:+.2f} · cohesión {home.cohesion}/20")
+        print(f"Gestión visitante: {am['score']:.0f}/100 · bonus {am['bonus']:+.2f} · cohesión {away.cohesion}/20")
+        print(f"Lectura táctica: local +{engine.tactical_matchup_bonus(0):.1f} · visitante +{engine.tactical_matchup_bonus(1):.1f}")
+        pause()
+
+    def live_players(self, ctx):
+        engine = ctx.engine
+        side = ctx.user_side
+        team = self.state.user_team
+        header(f"JUGADORES EN DIRECTO · {team.name.upper()}")
+        rows = engine.player_live_rows(side)
+        print(f"{'#':>3}  {'Jugador':<34} {'Pos':<9} {'Min':>3} {'G':>2} {'A':>2} {'S':>2} {'Tarj':>4} {'Rating':>6} {'Fatiga':>6}")
+        line()
+        for i, r in enumerate(rows, 1):
+            cards = f"{r['green']}/{r['yellow']}/{r['red']}"
+            print(f"{i:>3}  {short(r['name'],34):<34} {r['position']:<9} {r['minutes']:>3} {r['goals']:>2} {r['assists']:>2} {r['shots']:>2} {cards:>4} {r['rating']:>6.2f} {r['fatigue']:>5.0f}%")
+        print(f"\nCambios usados: {engine._subs[side]}/5 · Gestión: {team.management_score(engine._lineup(side)):.0f}/100")
+        section("BANQUILLO")
+        for i, r in enumerate(engine.bench_live_rows(side), 1):
+            state_txt = "LES" if r["injury"] > 0 else ("SAN" if r["suspension"] > 0 else "OK")
+            print(f"  {i:>2}. {short(r['name'],34):<34} {r['position']:<9} OVR {r['overall']:>4.1f} · fatiga {r['fatigue']:>5.0f}% · {state_txt}")
+        opp_team = self.state.teams[engine.away.id] if side == 0 else self.state.teams[engine.home.id]
+        section(f"RIVAL · {opp_team.name.upper()}")
+        print(f"{'#':>3}  {'Jugador':<34} {'Pos':<9} {'Min':>3} {'G':>2} {'A':>2} {'Rating':>6} {'Fatiga':>6}")
+        for i, r in enumerate(engine.player_live_rows(1 - side), 1):
+            print(f"{i:>3}  {short(r['name'],34):<34} {r['position']:<9} {r['minutes']:>3} {r['goals']:>2} {r['assists']:>2} {r['rating']:>6.2f} {r['fatigue']:>5.0f}%")
+        pause()
+
+    def live_tactics(self, ctx):
+        engine = ctx.engine
+        side = ctx.user_side
+        t = self.state.user_team
+        opp = self.state.teams[engine.away.id] if side == 0 else self.state.teams[engine.home.id]
+        while True:
+            header("TÁCTICA EN DIRECTO")
+            tac = t.tactics
+            print(f"Formación: {tac.formation} · Mentalidad: {tac.mentality.replace('_', ' ')} · Presión: {tac.press.replace('_', ' ')}")
+            print(f"Bloque: {tac.block.replace('_', ' ')} · Anchura: {tac.width.replace('_', ' ')} · Tempo: {tac.tempo.replace('_', ' ')} · Pase: {tac.passing.replace('_', ' ')} · PC: {tac.pc_routine.replace('_', ' ')}")
+            print(f"Lectura táctica actual: +{engine.tactical_matchup_bonus(side):.1f} · Gestión: {t.management_score(engine._lineup(side)):.0f}/100")
+            print("\n  1. Formación   2. Mentalidad   3. Presión   4. Bloque   5. Anchura")
+            print("  6. Tempo       7. Pase         8. Rutina PC   V. Volver")
+            op = ask("\n  > ").lower()
+            if op in ("v", ""):
+                return
+            if op == "1":
+                tac.formation = self.choose_option("Formación", list(FORMATION_SLOTS), tac.formation)
+            elif op == "2":
+                tac.mentality = self.choose_option("Mentalidad", ["muy_defensiva", "defensiva", "equilibrada", "ofensiva", "muy_ofensiva"], tac.mentality)
+            elif op == "3":
+                tac.press = self.choose_option("Presión", ["baja", "media", "alta", "muy_alta"], tac.press)
+            elif op == "4":
+                tac.block = self.choose_option("Bloque", ["bajo", "medio", "alto"], tac.block)
+            elif op == "5":
+                tac.width = self.choose_option("Anchura", ["estrecha", "normal", "ancha"], tac.width)
+            elif op == "6":
+                tac.tempo = self.choose_option("Tempo", ["lento", "normal", "rapido"], tac.tempo)
+            elif op == "7":
+                tac.passing = self.choose_option("Pase", ["corto", "mixto", "directo"], tac.passing)
+            elif op == "8":
+                tac.pc_routine = self.choose_option("Rutina PC", ["directa", "slip_izquierda", "slip_derecha", "desvio", "rebote"], tac.pc_routine)
+            print(f"\nTáctica actualizada. Lectura táctica: +{engine.tactical_matchup_bonus(side):.1f}. El efecto se aplica desde el próximo momento.")
+
+    def live_substitution(self, ctx):
+        engine = ctx.engine
+        side = ctx.user_side
+        header("CAMBIO EN DIRECTO")
+        rows = engine.player_live_rows(side)
+        bench = engine.bench_live_rows(side)
+        print(f"{'#':>3}  {'Jugador en el campo':<36} {'Pos':<9} {'Min':>3} {'Rating':>6} {'Fatiga':>6} {'Goles':>5}")
+        line()
+        for i, r in enumerate(rows, 1):
+            print(f"{i:>3}  {short(r['name'],36):<36} {r['position']:<9} {r['minutes']:>3} {r['rating']:>6.2f} {r['fatigue']:>5.0f}% {r['goals']:>5}")
+        section("BANQUILLO")
+        for i, r in enumerate(bench, 1):
+            state_txt = "LES" if r["injury"] > 0 else ("SAN" if r["suspension"] > 0 else "OK")
+            print(f"  {i:>2}. {short(r['name'],36):<36} {r['position']:<9} OVR {r['overall']:>4.1f} · fatiga {r['fatigue']:>5.0f}% · {state_txt}")
+        print(f"\nCambios disponibles: {5 - engine._subs[side]}/5")
+        raw_out = ask("Número del jugador que SALE (V = volver): ")
+        if raw_out.lower() in ("v", ""):
+            return
+        raw_in = ask("Número del jugador que ENTRA: ")
+        if not raw_out.isdigit() or not raw_in.isdigit():
+            print("Selección no válida.")
+            return
+        io, ii = int(raw_out), int(raw_in)
+        if not (1 <= io <= len(rows)) or not (1 <= ii <= len(bench)):
+            print("Número fuera de rango.")
+            return
+        ok, msg = engine.manual_substitute(side, rows[io - 1]["id"], bench[ii - 1]["id"], coaching=True)
+        print(("\n" + msg) if ok else f"\nNo se pudo hacer el cambio: {msg}")
 
     def print_match_report(self, p: dict):
         header(f"RESULTADO · {p['home_name'].upper()} {p['home_goals']}-{p['away_goals']} {p['away_name'].upper()}")
@@ -618,6 +867,11 @@ class GameUI:
         print(f"{'Estadística':<24} {short(p['home_name'],28):>28} {short(p['away_name'],28):>28}")
         for label, hv, av in rows:
             print(f"{label:<24} {str(hv):>28} {str(av):>28}")
+        section("GESTIÓN")
+        hm = p.get("home_management") or {}
+        am = p.get("away_management") or {}
+        print(f"  {short(p['home_name'],32):<32} gestión {hm.get('score', 0):>5.1f}/100 · bonus {hm.get('bonus', 0):+.2f} · cohesión {self.state.teams[p['home_id']].cohesion}/20")
+        print(f"  {short(p['away_name'],32):<32} gestión {am.get('score', 0):>5.1f}/100 · bonus {am.get('bonus', 0):+.2f} · cohesión {self.state.teams[p['away_id']].cohesion}/20")
         section("RATINGS DEL EQUIPO")
         ratings = p.get("ratings", {})
         for name, r in sorted(ratings.items(), key=lambda x: -x[1])[:8]:
@@ -677,6 +931,8 @@ class GameUI:
         header(f"FIN DE TEMPORADA · {s.season}")
         print(f"Campeón de DHA: {summ.get('champion') or '—'}")
         print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/12")
+        mg = s.user_team.management_profile()
+        print(f"Gestión final: {mg['score']:.1f}/100 (bonus {mg['bonus']:+.2f}) · Cohesión {s.user_team.cohesion}/20 · Mánager {s.user_team.manager_rating}/100")
         section("CLASIFICACIÓN FINAL")
         print(f"{'#':>3}  {'Equipo':<40} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         for row in summ.get("table", []):

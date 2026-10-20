@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import random
 import zlib
+from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
@@ -106,6 +107,26 @@ def _attendance_and_gate(home: TeamState, away: TeamState, rng: random.Random) -
     return attendance, revenue
 
 
+def _update_team_management(team: TeamState, lineup: list[PlayerState], opponent: TeamState,
+                            opponent_lineup: list[PlayerState], gf: int, ga: int) -> None:
+    """Premia o castiga la gestión: continuidad, resultado, descanso y encaje."""
+    if not lineup:
+        return
+    result = 1 if gf > ga else (0 if gf == ga else -1)
+    previous = set(team.last_lineup)
+    current = {p.id for p in lineup}
+    continuity = len(previous & current) / max(1, len(lineup)) if previous else 0.65
+    target_cohesion = 8.0 + continuity * 8.0 + result * 1.2
+    team.cohesion = int(round(_clamp(team.cohesion * 0.65 + target_cohesion * 0.35, 1, 20)))
+    team_strength = sum(team.lineup_strength(lineup)) / 2
+    opp_strength = sum(opponent.lineup_strength(opponent_lineup)) / 2 if opponent_lineup else 60.0
+    upset = 2.0 if result > 0 and opp_strength > team_strength + 4 else 0.0
+    management = team.management_score(lineup)
+    delta = result * 1.2 + (management - 55.0) * 0.02 + upset
+    team.manager_rating = int(round(_clamp(team.manager_rating + delta, 0, 100)))
+    team.last_lineup = [p.id for p in lineup]
+
+
 def _simulate_fixture(state: GameState, fixture: Fixture, rng: random.Random,
                       user_lineup: list[PlayerState] | None = None,
                       user_bench: list[PlayerState] | None = None,
@@ -138,6 +159,10 @@ def _simulate_fixture(state: GameState, fixture: Fixture, rng: random.Random,
     if not neutral:
         fixture.attendance, gate = _attendance_and_gate(home, away, rng)
         result.home_stats["gate_revenue"] = gate
+    _update_team_management(home, engine.home_starters, away, engine.away_starters,
+                            result.home_goals, result.away_goals)
+    _update_team_management(away, engine.away_starters, home, engine.home_starters,
+                            result.away_goals, result.home_goals)
     return result
 
 
@@ -161,6 +186,8 @@ def _user_result_payload(state: GameState, fixture: Fixture, result: MatchResult
         "user_stats": user_stats, "ratings": ratings,
         "attendance": fixture.attendance,
         "travel": (travel or {}) if not user_is_home else {},
+        "home_management": home.management_profile(),
+        "away_management": away.management_profile(),
         "shootout": result.shootout, "date": fixture.date,
     }
 
@@ -203,6 +230,125 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     # clasificación y recuperación
     recompute_table(state.teams, state.fixtures)
     _recover_after_round(state, old_status)
+    state.round += 1
+    if state.round <= 22:
+        next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
+        if next_fx:
+            state.date = next_fx.date
+    else:
+        state.date = "2027-04-10"
+        finish_regular_season(state)
+    return user_payload
+
+
+@dataclass
+class LiveRoundContext:
+    fixture: Fixture
+    engine: MatchEngine
+    old_status: dict[str, tuple[int, int]]
+    user_side: int
+    travel: dict | None
+    rng: random.Random
+
+
+def prepare_live_round(state: GameState, user_lineup_ids: list[str] | None = None,
+                       travel_option_id: str | None = None) -> LiveRoundContext:
+    """Prepara el partido del usuario en modo directo.
+
+    Simula primero el resto de la jornada y deja el partido del usuario listo
+    para avanzar cuarto a cuarto o momento a momento. No actualiza clasificación
+    ni recuperación hasta `finish_live_round`.
+    """
+    if state.phase != "regular":
+        raise ValueError("La temporada ya ha terminado.")
+    round_no = state.round
+    fixtures = [f for f in state.fixtures if f.phase == "regular" and f.round == round_no and not f.played]
+    if not fixtures:
+        raise ValueError("No hay partidos pendientes en esta jornada.")
+    old_status = {p.id: (p.injury, p.suspension) for t in state.teams.values() for p in t.players}
+    effective_ids = user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)
+    user_lineup, user_bench = make_lineup(state.user_team, effective_ids)
+    user_fixture = next((f for f in fixtures if state.club_id in (f.home_id, f.away_id)), None)
+    if user_fixture is None:
+        raise ValueError("El equipo del usuario no juega esta jornada.")
+    # El resto de la jornada se resuelve antes del partido en directo.
+    for idx, fx in enumerate(fixtures):
+        if fx.id == user_fixture.id:
+            continue
+        rng_other = random.Random(state.seed * 1000 + round_no * 37 + idx)
+        _simulate_fixture(state, fx, rng_other)
+    home = state.teams[user_fixture.home_id]
+    away = state.teams[user_fixture.away_id]
+    if user_fixture.home_id == state.club_id:
+        h_line, h_bench = user_lineup, user_bench
+        a_line, a_bench = away.auto_lineup()
+        user_side = 0
+    else:
+        a_line, a_bench = user_lineup, user_bench
+        h_line, h_bench = home.auto_lineup()
+        user_side = 1
+    travel = None
+    if user_fixture.away_id == state.club_id:
+        _, _, cities = load_teams()
+        opts = travel_options(state.user_team, home, cities, squad_size=18)
+        chosen = next((o for o in opts if o["id"] == travel_option_id), None)
+        if chosen is None:
+            chosen = next((o for o in opts if o["id"] == "equilibrado" and o["cost"] <= state.user_team.budget), None)
+        if chosen is None:
+            chosen = min(opts, key=lambda o: o["cost"])
+        if chosen["cost"] > state.user_team.budget:
+            chosen = min(opts, key=lambda o: o["cost"])
+        travel = apply_travel(state.user_team, chosen, players=user_lineup + user_bench)
+        travel.update({
+            "from": state.user_team.name, "to": home.name, "option_id": chosen["id"],
+            "mode": chosen["mode"], "distance_km": chosen["distance_km"],
+            "hotel_nights": chosen["hotel_nights"],
+        })
+        user_fixture.travel = travel
+    else:
+        travel = _travel_for_fixture(state, user_fixture, None, a_line, a_bench)
+        user_fixture.travel = travel or {}
+    idx_user = fixtures.index(user_fixture)
+    rng = random.Random(state.seed * 1000 + round_no * 37 + idx_user)
+    engine = MatchEngine(home, away, rng, neutral=False, knockout=False,
+                         home_lineup=h_line, away_lineup=a_line,
+                         home_bench=h_bench, away_bench=a_bench,
+                         detailed=True, auto_sub_sides={1 - user_side})
+    return LiveRoundContext(
+        fixture=user_fixture, engine=engine, old_status=old_status,
+        user_side=user_side, travel=travel if user_side == 1 else None, rng=rng,
+    )
+
+
+def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
+    """Cierra el partido en directo, actualiza la jornada y devuelve el parte."""
+    engine = ctx.engine
+    if engine.result is None:
+        engine.simulate()
+    result = engine.result
+    if result is None:
+        raise ValueError("El partido no tiene resultado.")
+    fixture = ctx.fixture
+    home = state.teams[fixture.home_id]
+    away = state.teams[fixture.away_id]
+    fixture.played = True
+    fixture.home_goals = result.home_goals
+    fixture.away_goals = result.away_goals
+    fixture.home_stats = result.home_stats
+    fixture.away_stats = result.away_stats
+    fixture.events = result.events
+    if not engine.neutral:
+        fixture.attendance, gate = _attendance_and_gate(home, away, ctx.rng)
+        result.home_stats["gate_revenue"] = gate
+    _update_team_management(home, engine.home_starters, away, engine.away_starters,
+                            result.home_goals, result.away_goals)
+    _update_team_management(away, engine.away_starters, home, engine.home_starters,
+                            result.away_goals, result.home_goals)
+    user_payload = _user_result_payload(state, fixture, result, ctx.travel)
+    state.last_result = user_payload
+    _update_user_after_match(state, fixture, result)
+    recompute_table(state.teams, state.fixtures)
+    _recover_after_round(state, ctx.old_status)
     state.round += 1
     if state.round <= 22:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
