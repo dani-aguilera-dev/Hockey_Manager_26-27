@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import csv, json, re, unicodedata
 from pathlib import Path
-from .models import PlayerState, TeamState, Tactics
+from .models import PlayerState, TeamState, Tactics, StaffMember, BoardMember
 
 BASE = Path(__file__).resolve().parents[2]
 DATA = BASE / "manager" / "data"
@@ -78,6 +78,8 @@ def _club_for_team(team_name: str, clubs_by_id: dict[str, dict]) -> dict | None:
 
 def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]]:
     clubs_by_id, cities_by_name = load_clubs()
+    staff_path = DATA / "staff_dha.json"
+    staff_by_club = json.load(open(staff_path, encoding="utf-8")) if staff_path.exists() else {}
     rows = list(csv.DictReader(open(TOOLS / "player_attributes_v2.csv", encoding="utf-8-sig")))
     by_team: dict[str, list[dict]] = {}
     for r in rows:
@@ -147,6 +149,27 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
         assistant_rating += 5 if fac.get("video") else 0
         assistant_rating += 3 if fac.get("medical") else 0
         assistant_rating = max(45, min(85, assistant_rating))
+        staff_rows = staff_by_club.get(club["id"], {}).get("staff", [])
+        staff = [StaffMember(**{k: v for k, v in row.items() if k in StaffMember.__dataclass_fields__}) for row in staff_rows]
+        board = [BoardMember(**{k: v for k, v in row.items() if k in BoardMember.__dataclass_fields__}) for row in staff_by_club.get(club["id"], {}).get("board", [])]
+        if staff:
+            assistant = next((m for m in staff if m.role == "assistant"), None)
+            if assistant:
+                assistant_rating = assistant.rating
+        wage_budget = int(fin.get("wage_budget", 0) or 0)
+        # Reparto salarial proporcional al nivel de los jugadores.
+        if players and wage_budget:
+            weights = [max(1.0, p.overall - 40.0) ** 2 for p in players]
+            total_w = sum(weights)
+            assigned = 0
+            for i, (p, w) in enumerate(zip(players, weights)):
+                if i == len(players) - 1:
+                    p.salary = max(0, wage_budget - assigned)
+                else:
+                    p.salary = int(wage_budget * w / total_w)
+                    assigned += p.salary
+        transfer_budget = int(fin.get("transfer_budget", 0) or 0)
+        cash = transfer_budget + int(wage_budget * 0.45)
         teams[club["id"]] = TeamState(
             id=club["id"], name=club["name"], league=club["league"], city=club["city"],
             players=players, tactics=Tactics(),
@@ -155,8 +178,9 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
             board_expectation=club.get("board", {}).get("expectation", ""),
             preferred_mode=club.get("logistics", {}).get("preferred_mode", ""),
             assistant_rating=assistant_rating,
-            budget=int(fin.get("transfer_budget", 0) or 0),
-            wage_budget=int(fin.get("wage_budget", 0) or 0),
+            staff=staff, board=board,
+            transfer_budget=transfer_budget, club_tier=int(fin.get("tier", 3) or 3),
+            budget=cash, wage_budget=wage_budget,
         )
     return teams, clubs_by_id, cities_by_name
 

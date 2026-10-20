@@ -18,6 +18,8 @@
 - Dar una **charla de vestuario** al descanso o delegarla en el segundo entrenador.
 - Enfrentarte a una **IA reactiva** que ajusta táctica y cambios según el marcador y la fatiga.
 - Planificar el **entrenamiento semanal** o delegarlo en el segundo entrenador, con plan automático y editor de sesiones.
+- Consultar **staff y junta directiva**, con efectos reales del staff en entrenamiento y charla.
+- Gestionar **finanzas**: caja, presupuesto de fichajes, salarios, patrocinio, taquilla y viajes.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -56,7 +58,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **26 tests superados**.
+Resultado esperado: **30 tests superados**.
 
 ---
 
@@ -237,6 +239,7 @@ Al terminar la jornada 22:
 - `test_season.py`: temporada completa, Final Four, playout y once manual.
 - `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo, recompensa de gestión, charla de vestuario y IA reactiva.
 - `test_training.py`: plan automático, recuperación, entrenamiento semanal, IA y guardado del estado.
+- `test_staff_finance.py`: staff, junta, salarios, cierre financiero y resumen.
 
 Comando:
 
@@ -252,7 +255,9 @@ python3 -m pytest src/tests -q
 - Solo DHA; DHB y 1ª Andaluza no tienen liga simulada.
 - Final Four y playout se simulan automáticamente; no tienen previa interactiva.
 - No se puede guardar la partida en mitad del partido.
-- El entrenamiento es semanal y grupal; no hay sesiones individuales, staff especializado, mercado, cantera, prensa ni multi-temporada.
+- El entrenamiento es semanal y grupal; no hay sesiones individuales, mercado, cantera, prensa ni multi-temporada.
+- No hay contratación/despido de staff ni mercado de fichajes.
+- Parte del staff y de la junta son nombres de modelo, no datos oficiales.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
 - La IA de viaje usa equilibrado/barato; no negocia hoteles ni vuelos.
 - El motor es lúdico y explicable, no una simulación física.
@@ -272,6 +277,8 @@ python3 -m pytest src/tests -q
 | Partido en directo con decisiones | Cumplido |
 | La gestión influye en el rendimiento | Cumplido |
 | Entrenamiento semanal con plan automático | Cumplido |
+| Staff con efectos y junta directiva | Cumplido |
+| Finanzas de jornada y salarios | Cumplido |
 | Sin errores de consola | Cumplido en pruebas y simulación |
 
 ---

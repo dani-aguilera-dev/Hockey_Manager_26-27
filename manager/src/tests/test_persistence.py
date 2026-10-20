@@ -19,6 +19,11 @@ def test_sqlite_roundtrip():
         assert loaded.user_team.players[0].overall == state.user_team.players[0].overall
         assert loaded.last_result["home_goals"] == state.last_result["home_goals"]
         assert len(loaded.fixtures) == len(state.fixtures)
+        assert loaded.user_team.staff[0].name == state.user_team.staff[0].name
+        assert loaded.user_team.board[0].name == state.user_team.board[0].name
+        assert loaded.user_team.players[0].salary == state.user_team.players[0].salary
+        assert loaded.user_team.finance_log == state.user_team.finance_log
+        assert loaded.finance_round == state.finance_round
 
 
 def test_training_state_roundtrip():

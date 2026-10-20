@@ -133,6 +133,10 @@ def apply_training_plan(team: TeamState, plan: list[str], opponent: TeamState | 
         plan = list(PLAN_PRESETS["equilibrado"])
     coach_rating = team.assistant_rating if delegated else team.manager_rating
     quality = max(0.0, min(1.0, (coach_rating - 45.0) / 50.0))
+    fitness_q = max(0.0, min(1.0, (team.staff_rating("fitness_coach") - 45.0) / 50.0))
+    physio_q = max(0.0, min(1.0, (team.staff_rating("physio") - 45.0) / 50.0))
+    analyst_q = max(0.0, min(1.0, (team.staff_rating("performance_analyst") - 45.0) / 50.0))
+    gk_q = max(0.0, min(1.0, (team.staff_rating("gk_coach") - 45.0) / 50.0))
     fatigue_before = sum(p.fatigue for p in team.players) / max(1, len(team.players))
     morale_before = team.morale
     form_before = sum(p.form for p in team.players) / max(1, len(team.players))
@@ -144,8 +148,18 @@ def apply_training_plan(team: TeamState, plan: list[str], opponent: TeamState | 
     for session in plan:
         spec = SESSION_TYPES[session]
         intense = session in ("fisico", "ataque", "defensa")
+        if session in ("fisico", "activacion"):
+            session_q = (quality + fitness_q) / 2
+        elif session in ("recuperacion", "descanso"):
+            session_q = (quality + physio_q) / 2
+        elif session == "video":
+            session_q = (quality + analyst_q) / 2
+        elif session == "set_pieces":
+            session_q = (quality + gk_q) / 2
+        else:
+            session_q = quality
         for p in team.players:
-            fat = spec["fatigue"] * (1.0 - quality * 0.12) * rng.uniform(0.85, 1.15)
+            fat = spec["fatigue"] * (1.0 - session_q * 0.12) * rng.uniform(0.85, 1.15)
             p.fatigue = max(0.0, min(100.0, p.fatigue + fat))
             p.form = max(1.0, min(10.0, p.form + spec["form"] * rng.uniform(0.8, 1.2)))
             # moral: cambios pequeños, con azar
@@ -155,7 +169,7 @@ def apply_training_plan(team: TeamState, plan: list[str], opponent: TeamState | 
             elif m < 0 and rng.random() < abs(m) * 2.0:
                 p.morale = max(1, p.morale - 1)
             # riesgo de lesión
-            risk = spec.get("injury", 0.0) * (1.0 + p.fatigue / 120.0) * (1.05 - quality * 0.25)
+            risk = spec.get("injury", 0.0) * (1.0 + p.fatigue / 120.0) * (1.05 - session_q * 0.25)
             if p.injury > 0:
                 risk = 0.0
             if rng.random() < risk:
@@ -163,11 +177,11 @@ def apply_training_plan(team: TeamState, plan: list[str], opponent: TeamState | 
                 p.injury = max(p.injury, matches)
                 injuries.append({"player": p.name, "matches": matches, "session": spec["label"]})
             # recuperación de lesiones leves
-            if session in ("recuperacion", "descanso") and p.injury > 0 and rng.random() < 0.10 + quality * 0.08:
+            if session in ("recuperacion", "descanso") and p.injury > 0 and rng.random() < 0.10 + physio_q * 0.12:
                 p.injury = max(0, p.injury - 1)
                 recoveries.append(p.name)
             # progreso de atributos
-            chance = _gain_chance(p, quality, intense)
+            chance = _gain_chance(p, session_q, intense)
             for attr in spec.get("attrs", []):
                 if rng.random() < chance:
                     old = p.attributes.get(attr, 50)
@@ -177,7 +191,7 @@ def apply_training_plan(team: TeamState, plan: list[str], opponent: TeamState | 
                         if len(gains) < 20:
                             gains.append({"player": p.name, "attr": attr, "value": old + 1})
         cohesion_delta += spec.get("cohesion", 0.0)
-        prep_bonus += spec.get("prep", 0.0)
+        prep_bonus += spec.get("prep", 0.0) * (0.6 + analyst_q * 0.8)
     team.cohesion = int(round(max(1, min(20, team.cohesion + cohesion_delta))))
     team.morale = int(round(max(1, min(20, team.morale + sum(SESSION_TYPES[s].get("morale", 0.0) for s in plan)))))
     team.prep_bonus = round(min(2.5, prep_bonus + quality * 0.4), 2)

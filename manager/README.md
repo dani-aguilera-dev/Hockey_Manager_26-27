@@ -48,6 +48,7 @@ La Fase 1 incluye:
 - **IA reactiva** que ajusta táctica y cambios según el marcador, la fatiga y tu planteamiento;
 - **sistema de gestión**: moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager que otorgan un bonus de hasta ±7 puntos;
 - **entrenamiento semanal**: plan automático del segundo entrenador, editor de sesiones, recuperación y preparación del rival;
+- **staff y finanzas**: siete roles de staff, junta directiva, salarios, patrocinio, taquilla, viajes y caja;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.
@@ -111,6 +112,7 @@ manager/
 8. [`docs/07_FASE1_IMPLEMENTACION.md`](docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor, pruebas y limitaciones de la Fase 1.
 9. [`docs/08_MODO_DIRECTO_Y_GESTION.md`](docs/08_MODO_DIRECTO_Y_GESTION.md) — partido en directo y recompensa a la buena gestión.
 10. [`docs/09_ENTRENAMIENTO_SEMANAL.md`](docs/09_ENTRENAMIENTO_SEMANAL.md) — entrenamiento semanal, plan automático y preparación del rival.
+11. [`docs/10_STAFF_Y_FINANZAS.md`](docs/10_STAFF_Y_FINANZAS.md) — staff, junta directiva, salarios y finanzas.
 
 ## Datos
 

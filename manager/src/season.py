@@ -13,6 +13,7 @@ from .calendar import create_dha_fixtures, recompute_table, dha_table
 from .logistics import travel_options, apply_travel
 from .match_engine import MatchEngine, MatchResult
 from .training import auto_plan, apply_training_plan
+from .finance import apply_round_finances
 
 DHA_TEAMS = 12
 START_DATE = "2026-09-20"
@@ -293,6 +294,7 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     # clasificación y recuperación
     recompute_table(state.teams, state.fixtures)
     _recover_after_round(state, old_status)
+    apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
     if state.round <= 22:
@@ -417,6 +419,7 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     _update_user_after_match(state, fixture, result)
     recompute_table(state.teams, state.fixtures)
     _recover_after_round(state, ctx.old_status)
+    apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
     if state.round <= 22:

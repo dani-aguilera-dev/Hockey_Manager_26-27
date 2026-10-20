@@ -126,6 +126,7 @@ class PlayerState:
     season_assists: int = 0
     apps: int = 0
     rating_sum: float = 0.0
+    salary: int = 0
 
     @property
     def available(self) -> bool:
@@ -167,6 +168,46 @@ class PlayerState:
 
 
 @dataclass
+class StaffMember:
+    role: str
+    name: str
+    rating: int = 60
+    salary: int = 0
+    contract_until: str = ""
+    source: str = "modelo"
+    confidence: str = "baja"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "StaffMember":
+        return cls(
+            role=d["role"], name=d["name"], rating=int(d.get("rating", 60)),
+            salary=int(d.get("salary", 0)), contract_until=d.get("contract_until", ""),
+            source=d.get("source", "modelo"), confidence=d.get("confidence", "baja"),
+        )
+
+
+@dataclass
+class BoardMember:
+    role: str
+    name: str
+    source: str = "modelo"
+    confidence: str = "baja"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "BoardMember":
+        return cls(
+            role=d["role"], name=d["name"],
+            source=d.get("source", "modelo"), confidence=d.get("confidence", "baja"),
+        )
+
+
+@dataclass
 class TeamState:
     id: str
     name: str
@@ -187,6 +228,11 @@ class TeamState:
     manager_rating: int = 60
     assistant_rating: int = 60
     prep_bonus: float = 0.0
+    staff: list[StaffMember] = field(default_factory=list)
+    board: list[BoardMember] = field(default_factory=list)
+    transfer_budget: int = 0
+    club_tier: int = 3
+    finance_log: list[dict] = field(default_factory=list)
     last_lineup: list[str] = field(default_factory=list)
     played: int = 0
     won: int = 0
@@ -265,6 +311,18 @@ class TeamState:
         defense += self.tactics.defense_mod() * 100
         return max(25.0, attack), max(25.0, defense)
 
+    def staff_rating(self, role: str, default: int = 55) -> int:
+        for m in self.staff:
+            if m.role == role:
+                return int(m.rating)
+        return default
+
+    def staff_wage_bill(self) -> int:
+        return sum(max(0, int(m.salary)) for m in self.staff)
+
+    def player_wage_bill(self) -> int:
+        return sum(max(0, int(p.salary)) for p in self.players)
+
     def management_profile(self, lineup: list[PlayerState] | None = None) -> dict:
         """Puntuación interna de gestión (0-100) y sus componentes.
 
@@ -342,6 +400,11 @@ class TeamState:
             "manager_rating": self.manager_rating,
             "assistant_rating": self.assistant_rating,
             "prep_bonus": self.prep_bonus,
+            "staff": [m.to_dict() for m in self.staff],
+            "board": [m.to_dict() for m in self.board],
+            "transfer_budget": self.transfer_budget,
+            "club_tier": self.club_tier,
+            "finance_log": self.finance_log,
             "last_lineup": self.last_lineup,
             "played": self.played,
             "won": self.won,
@@ -365,7 +428,11 @@ class TeamState:
             morale=d.get("morale", 12), cohesion=d.get("cohesion", 12),
             manager_rating=d.get("manager_rating", 60),
             assistant_rating=d.get("assistant_rating", 60),
-            prep_bonus=d.get("prep_bonus", 0.0), last_lineup=d.get("last_lineup", []),
+            prep_bonus=d.get("prep_bonus", 0.0),
+            staff=[StaffMember.from_dict(m) for m in d.get("staff", [])],
+            board=[BoardMember.from_dict(m) for m in d.get("board", [])],
+            transfer_budget=d.get("transfer_budget", 0), club_tier=d.get("club_tier", 3),
+            finance_log=d.get("finance_log", []), last_lineup=d.get("last_lineup", []),
             played=d.get("played", 0), won=d.get("won", 0),
             drawn=d.get("drawn", 0), lost=d.get("lost", 0),
             goals_for=d.get("goals_for", 0), goals_against=d.get("goals_against", 0),
@@ -419,6 +486,7 @@ class GameState:
     weekly_plan: list[str] = field(default_factory=list)
     training_report: dict[str, Any] = field(default_factory=dict)
     ai_training_round: int = 0
+    finance_round: int = 0
 
     @property
     def user_team(self) -> TeamState:
@@ -462,6 +530,7 @@ class GameState:
             "weekly_plan": self.weekly_plan,
             "training_report": self.training_report,
             "ai_training_round": self.ai_training_round,
+            "finance_round": self.finance_round,
         }
 
     @classmethod
@@ -479,4 +548,5 @@ class GameState:
             weekly_plan=d.get("weekly_plan", []),
             training_report=d.get("training_report", {}),
             ai_training_round=d.get("ai_training_round", 0),
+            finance_round=d.get("finance_round", 0),
         )

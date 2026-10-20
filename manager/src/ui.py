@@ -19,6 +19,7 @@ from .season import (new_game, play_round, make_lineup, season_summary,
 from .training import (SESSION_TYPES, SESSION_ORDER, DAYS, PLAN_PRESETS,
                        auto_plan, apply_training_plan, format_plan, plan_name)
 from .persistence import DEFAULT_DB, save_game, load_game, list_saves
+from .finance import financial_summary, sponsor_income
 
 W = 100
 WEEKDAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -223,6 +224,7 @@ class GameUI:
             print("  8. Guardar partida")
             print("  9. Salir")
             print("  E. Entrenamiento semanal")
+            print("  S. Staff y junta directiva")
             print("  A. Simular jornada (auto)")
             op = ask("\n  > ").lower()
             if op == "1":
@@ -246,6 +248,8 @@ class GameUI:
                 return
             elif op == "e":
                 self.training_screen()
+            elif op == "s":
+                self.staff_screen()
             elif op == "a":
                 self.auto_round()
             else:
@@ -277,7 +281,7 @@ class GameUI:
             print(f"Entrenamiento: planificado ({plan_name(s.weekly_plan)}) · Preparación rival +{t.prep_bonus:.1f} · Segundo entrenador {t.assistant_rating}/100")
         else:
             print(f"Entrenamiento: pendiente · [E] planificar la semana · Segundo entrenador {t.assistant_rating}/100")
-        print(f"Presupuesto: {money(t.budget)} · Masa salarial: {money(t.wage_budget)}")
+        print(f"Caja: {money(t.budget)} · Fichajes: {money(t.transfer_budget)} · Salarios: {money(t.player_wage_bill())} + staff {money(t.staff_wage_bill())}")
         inj = sum(1 for p in t.players if p.injury > 0)
         sus = sum(1 for p in t.players if p.suspension > 0)
         print(f"Bajas: {inj} lesionados · {sus} sancionados · Fatiga media: {sum(p.fatigue for p in t.players)/max(1,len(t.players)):.1f}%")
@@ -473,27 +477,61 @@ class GameUI:
     def finances_screen(self):
         s = self.state
         t = s.user_team
+        fin = financial_summary(t)
         header(f"FINANZAS · {t.name.upper()} · {s.season}")
-        gate = sum(int(f.home_stats.get("gate_revenue", 0)) for f in s.fixtures if f.phase == "regular" and f.home_id == t.id and f.played)
-        travel = sum(int(f.travel.get("cost", 0)) for f in s.fixtures if f.phase == "regular" and f.away_id == t.id and f.travel)
-        print(f"Presupuesto actual:      {money(t.budget)}")
-        print(f"Masa salarial anual:     {money(t.wage_budget)}")
-        print(f"Taquilla acumulada:      {money(gate)}")
-        print(f"Viajes acumulados:       {money(travel)}")
-        print(f"Balance de explotación:  {money(gate - travel)}  (taquilla - viajes; sin salarios en Fase 1)")
-        print(f"Objetivo de la junta:    {t.board_expectation}")
-        print(f"Confianza de la junta:   {t.board_confidence}/100")
-        print(f"Confianza de la afición: {t.fan_confidence}/100")
-        if t.budget < 0:
-            print("\nALERTA: el presupuesto está en negativo. La junta puede perder la paciencia.")
-        last = s.last_result
-        if last:
-            section("ÚLTIMO PARTIDO")
-            print(f"{last.get('home_name')} {last.get('home_goals')}-{last.get('away_goals')} {last.get('away_name')}")
-            print(f"Asistencia: {last.get('attendance', 0)} · Taquilla: {money(last.get('home_stats', {}).get('gate_revenue', 0))}")
-            tr = last.get("travel") or {}
-            if tr:
-                print(f"Viaje: {tr.get('mode', '—')} · {tr.get('distance_km', '—')} km · coste {money(tr.get('cost', 0))} · fatiga +{tr.get('fatigue_add', 0)}")
+        print(f"Caja actual:             {money(fin['cash'])}")
+        print(f"Presupuesto de fichajes: {money(fin['transfer_budget'])}")
+        print(f"Masa salarial anual:     {money(fin['annual_wage_bill'])}  (jugadores {money(fin['player_wage_bill'])} + staff {money(fin['staff_wage_bill'])})")
+        print(f"Coste salarial/jornada:  {money(fin['round_player_wages'] + fin['round_staff_wages'])}  (jugadores {money(fin['round_player_wages'])} + staff {money(fin['round_staff_wages'])})")
+        print(f"Patrocinio/jornada:      {money(fin['sponsor_round'])}")
+        section("BALANCE DE TEMPORADA")
+        print(f"  Taquilla:              {money(fin['gate'])}")
+        print(f"  Patrocinio:            {money(fin['sponsor'])}")
+        print(f"  Salarios jugadores:    {money(fin['player_wages'])}")
+        print(f"  Salarios staff:        {money(fin['staff_wages'])}")
+        print(f"  Viajes:                {money(fin['travel'])}")
+        print(f"  Balance:               {money(fin['net'])}")
+        print(f"  Confianza junta:       {t.board_confidence}/100 · Afición: {t.fan_confidence}/100")
+        print(f"  Objetivo:              {t.board_expectation}")
+        if fin["cash"] < 0:
+            print("\nALERTA: la caja está en negativo. La junta puede perder la paciencia.")
+        elif fin["net"] < 0:
+            print("\nAviso: el balance de temporada es negativo; vigila salarios y viajes.")
+        section("ÚLTIMOS MOVIMIENTOS")
+        if fin["entries"]:
+            for e in fin["entries"]:
+                print(f"  J{e['round']:>2}: taquilla {money(e['gate'])} + patrocinio {money(e['sponsor'])} - salarios {money(e['wages'])} - viajes {money(e['travel'])} = {money(e['net'])} · caja {money(e['cash_after'])}")
+        else:
+            print("  Todavía no se ha cerrado ninguna jornada.")
+        pause()
+
+    def staff_screen(self):
+        t = self.state.user_team
+        header(f"STAFF Y JUNTA · {t.name.upper()}")
+        roles = {
+            "assistant": "Segundo entrenador", "fitness_coach": "Preparador físico",
+            "gk_coach": "Entrenador de porteros", "performance_analyst": "Analista de rendimiento",
+            "scout": "Ojeador", "physio": "Fisioterapeuta", "technical_director": "Director deportivo",
+        }
+        section("STAFF TÉCNICO")
+        print(f"{'Rol':<26} {'Nombre':<28} {'Rating':>6} {'Salario':>10}  Fuente")
+        line()
+        for m in t.staff:
+            print(f"{roles.get(m.role, m.role):<26} {short(m.name,28):<28} {m.rating:>6} {money(m.salary):>10}  {m.source} ({m.confidence})")
+        section("EFECTOS DEL STAFF")
+        print(f"  Plan automático / charla: segundo entrenador {t.staff_rating('assistant')}/100")
+        print(f"  Entrenamiento físico y prevención: preparador {t.staff_rating('fitness_coach')}/100")
+        print(f"  Recuperación y lesiones: fisioterapeuta {t.staff_rating('physio')}/100")
+        print(f"  Vídeo y preparación del rival: analista {t.staff_rating('performance_analyst')}/100")
+        print(f"  Porteros y set pieces: entrenador de porteros {t.staff_rating('gk_coach')}/100")
+        section("JUNTA DIRECTIVA")
+        print(f"{'Cargo':<22} {'Nombre':<34} Fuente")
+        line()
+        board_roles = {"presidente": "Presidente", "vicepresidente": "Vicepresidente", "secretario": "Secretario",
+                       "tesorero": "Tesorero", "vocal_hockey": "Vocal de hockey", "vocal_social": "Vocal social"}
+        for m in t.board:
+            print(f"{board_roles.get(m.role, m.role):<22} {short(m.name,34):<34} {m.source} ({m.confidence})")
+        print(f"\n  Objetivo: {t.board_expectation} · Confianza: {t.board_confidence}/100")
         pause()
 
     # ------------------------------------------------------------- logística

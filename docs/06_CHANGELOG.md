@@ -1,5 +1,51 @@
 # Changelog
 
+## 2026-10-20 — Staff, junta directiva y finanzas
+
+### Añadido
+
+- Staff DHA para los 12 clubes:
+  - segundo entrenador, preparador físico, entrenador de porteros, analista, ojeador, fisioterapeuta y director deportivo;
+  - ratings, salarios, contrato, fuente y confianza.
+- Junta directiva completa por club:
+  - presidente, vicepresidente, secretario, tesorero, vocal de hockey y vocal social;
+  - nombres reales donde había fuente y modelos donde no.
+- Efectos del staff:
+  - segundo entrenador en plan automático y charla;
+  - preparador físico en sesiones físicas y prevención;
+  - fisioterapeuta en recuperación;
+  - analista en vídeo y preparación del rival;
+  - entrenador de porteros en set pieces.
+- Finanzas:
+  - caja operativa y presupuesto de fichajes separados;
+  - salarios de jugadores y staff;
+  - patrocinio por jornada, taquilla y viajes;
+  - cierre financiero por jornada;
+  - historial de movimientos;
+  - aviso y pérdida de confianza si la caja entra en negativo.
+- `manager/data/staff_dha.json` y `manager/data/staff_dha_sources.md`.
+- `manager/docs/10_STAFF_Y_FINANZAS.md`.
+- Tests de staff y finanzas.
+
+### Cambiado
+
+- El dashboard muestra caja, presupuesto de fichajes y salarios.
+- La pantalla de finanzas se amplía con balance, movimientos y confianza.
+- Los salarios de los jugadores se reparten proporcionalmente al presupuesto.
+- El entrenamiento usa los ratings del staff.
+- Tests ampliados a 30.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 30 tests superados.
+
+---
+
 ## 2026-10-20 — Entrenamiento semanal con plan automático
 
 ### Añadido

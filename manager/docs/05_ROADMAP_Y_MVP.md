@@ -79,7 +79,7 @@ No incluye:
 
 ### Fase 2 — Gestión de club
 
-**Estado parcial:** Fase 2A (entrenamiento semanal con plan automático) implementada el 2026-10-20. Ver `09_ENTRENAMIENTO_SEMANAL.md`.
+**Estado parcial:** Fase 2A (entrenamiento semanal con plan automático) y Fase 2B (staff y finanzas) implementadas el 2026-10-20. Ver `09_ENTRENAMIENTO_SEMANAL.md` y `10_STAFF_Y_FINANZAS.md`.
 
 Añade:
 
