@@ -1,5 +1,49 @@
 # Changelog
 
+## 2026-10-20 — Fase 4: Copa, cantera, prensa y junta dinámica
+
+### Añadido
+
+- Copa del Rey de 16 equipos:
+  - 12 DHA + 4 mejores DHB;
+  - octavos, cuartos, semifinal y final a partido único;
+  - shootout en caso de empate;
+  - premio de 50.000 € y confianza para el campeón;
+  - pantalla de Copa y simulación completa.
+- Cantera:
+  - academia por club;
+  - juveniles con edad, posición, overall, potencial, salario y contrato;
+  - promoción al primer equipo y liberación;
+  - desarrollo y nuevas generaciones al final de temporada.
+- Rueda de prensa:
+  - dos preguntas por jornada;
+  - tres respuestas con efectos en moral, afición y junta;
+  - historial de titulares.
+- Junta directiva dinámica:
+  - objetivo de temporada;
+  - revisión al final de temporada;
+  - cambios de confianza y presupuesto de fichajes;
+  - aviso de riesgo de destitución.
+- `manager/docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`.
+- Tests de Copa, cantera, prensa y junta.
+
+### Cambiado
+
+- El resumen de temporada incluye Copa y revisión de la junta.
+- El dashboard añade Copa, prensa y cantera.
+- Tests ampliados a 40.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 40 tests superados.
+
+---
+
 ## 2026-10-20 — Fase 3: mercado, contratos y multi-temporada
 
 ### Añadido

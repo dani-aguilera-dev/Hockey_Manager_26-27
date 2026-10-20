@@ -51,6 +51,7 @@ La Fase 1 incluye:
 - **staff y finanzas**: siete roles de staff, junta directiva, salarios, patrocinio, taquilla, viajes y caja;
 - **mercado y contratos**: ventanas de verano/invierno, ofertas, renovaciones, contratación de staff y mercado IA;
 - **multi-temporada**: ascensos, descensos, DHA/DHB, contratos, canteranos y nueva temporada;
+- **Copa del Rey**, cantera, rueda de prensa y junta directiva dinámica;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.
@@ -116,6 +117,7 @@ manager/
 10. [`docs/09_ENTRENAMIENTO_SEMANAL.md`](docs/09_ENTRENAMIENTO_SEMANAL.md) — entrenamiento semanal, plan automático y preparación del rival.
 11. [`docs/10_STAFF_Y_FINANZAS.md`](docs/10_STAFF_Y_FINANZAS.md) — staff, junta directiva, salarios y finanzas.
 12. [`docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`](docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md) — mercado, contratos, staff y multi-temporada.
+13. [`docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
 
 ## Datos
 

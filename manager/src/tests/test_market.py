@@ -68,6 +68,7 @@ def test_multi_season_transition():
     assert state.round == 1
     assert len([t for t in state.teams.values() if t.league == "DHA"]) == 12
     assert len([t for t in state.teams.values() if t.league == "DHB"]) == 16
-    assert len(state.fixtures) == (132 if state.competition == "DHA" else 240)
+    regular = [f for f in state.fixtures if f.phase == "regular"]
+    assert len(regular) == (132 if state.competition == "DHA" else 240)
     assert state.total_rounds == (22 if state.competition == "DHA" else 30)
     assert all(len(t.players) >= 18 for t in state.teams.values() if t.league in ("DHA", "DHB"))

@@ -14,6 +14,8 @@ from .logistics import travel_options, apply_travel
 from .match_engine import MatchEngine, MatchResult
 from .training import auto_plan, apply_training_plan
 from .finance import apply_round_finances
+from .youth import initial_youth, develop_youth, intake, generate_youth
+from .cup import new_cup, cup_round_fixtures, cup_start, ROUND_NAMES, ROUND_PHASES
 
 DHA_TEAMS = 12
 START_DATE = "2026-09-20"
@@ -43,6 +45,8 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
             t.morale = 12
             for p in t.players:
                 p.form = 6.2 + random.Random(state.seed + zlib.crc32(p.id.encode("utf-8")) % 1000).random() * 0.9
+    initial_youth(state.teams, state.seed)
+    new_cup(state)
     state.inbox.append({
         "date": "2026-08-01", "from": "Junta Directiva",
         "subject": f"Bienvenido al {state.user_team.name}",
@@ -504,6 +508,65 @@ def _background_table(state: GameState, league: str) -> list[dict]:
     return sorted(rows.values(), key=lambda r: (-r["points"], -(r["gf"] - r["ga"]), -r["gf"], r["team"].name))
 
 
+def simulate_cup_round(state: GameState, user_lineup_ids: list[str] | None = None) -> dict | None:
+    """Simula la ronda actual de Copa del Rey y genera la siguiente."""
+    if not state.cup_active:
+        return None
+    fixtures = cup_round_fixtures(state)
+    if not fixtures:
+        return None
+    current_round = state.cup_round
+    payload = None
+    winners = []
+    for idx, fx in enumerate(fixtures):
+        if fx.played:
+            winners.append(fx.home_id if fx.home_goals > fx.away_goals else fx.away_id)
+            continue
+        rng = random.Random(state.seed + current_round * 300 + idx)
+        is_user = state.club_id in (fx.home_id, fx.away_id)
+        line, bench = make_lineup(state.user_team, user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)) if is_user else (None, None)
+        res = _simulate_fixture(state, fx, rng, user_lineup=line, user_bench=bench, neutral=False, knockout=True)
+        if res.shootout:
+            winner = res.shootout["winner_id"]
+        else:
+            winner = fx.home_id if res.home_goals > res.away_goals else fx.away_id
+        winners.append(winner)
+        if is_user:
+            payload = _user_result_payload(state, fx, res, fx.travel)
+            state.last_result = payload
+    if current_round < 4:
+        next_round = current_round + 1
+        next_phase = ROUND_PHASES[next_round]
+        d = cup_start(state).toordinal() + [24, 52, 122, 171][next_round - 1]
+        from datetime import date as _date
+        next_date = _date.fromordinal(d).isoformat()
+        for i in range(0, len(winners), 2):
+            state.fixtures.append(Fixture(
+                id=f"C{next_round}-{i//2+1}", round=100 + next_round, date=next_date,
+                home_id=winners[i], away_id=winners[i + 1], phase=next_phase,
+            ))
+        state.cup_round = next_round
+    else:
+        winner = winners[0] if winners else ""
+        state.cup_winner_id = winner
+        state.cup_active = False
+        if winner in state.teams:
+            state.teams[winner].budget += 50000
+            state.teams[winner].board_confidence = min(100, state.teams[winner].board_confidence + 4)
+        if winner == state.club_id:
+            state.user_team.fan_confidence = min(100, state.user_team.fan_confidence + 8)
+            state.inbox.append({"date": state.date, "from": "Prensa", "subject": "¡Campeón de Copa!",
+                                "body": "El club ha ganado la Copa del Rey. La afición está eufórica."})
+    return payload
+
+
+def simulate_cup_remaining(state: GameState) -> None:
+    while state.cup_active:
+        simulate_cup_round(state)
+        if state.cup_round > 4:
+            break
+
+
 def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) -> dict:
     """Simula semifinales, final y playout de DHA."""
     table = league_table(state.teams, "DHA")
@@ -573,7 +636,58 @@ def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) 
     return state.final4
 
 
+def _board_target(team: TeamState, competition: str) -> int:
+    e = (team.board_expectation or "").lower()
+    if "ganar la liga" in e or "título" in e:
+        return 1
+    if "final four" in e or "top 4" in e:
+        return 4
+    if "top 6" in e:
+        return 6
+    if "top 8" in e:
+        return 8
+    if "ascenso" in e:
+        return 2
+    if "play-off" in e or "playoff" in e:
+        return 4
+    if "permanencia" in e or "salvación" in e:
+        return 10 if competition == "DHA" else 12
+    return 8
+
+
+def _board_review(state: GameState) -> dict:
+    table = league_table(state.teams, state.competition)
+    pos = next((i for i, t in enumerate(table, 1) if t.id == state.club_id), len(table))
+    target = _board_target(state.user_team, state.competition)
+    met = pos <= target
+    before = state.user_team.board_confidence
+    if met:
+        delta = 10 if pos < target else 6
+        budget_factor = 1.12
+        message = "La junta está satisfecha con el objetivo cumplido."
+    else:
+        delta = -12 if pos > target + 3 else -8
+        budget_factor = 0.90
+        message = "La junta considera que el equipo se ha quedado corto."
+    state.user_team.board_confidence = max(0, min(100, before + delta))
+    state.user_team.transfer_budget = int(state.user_team.transfer_budget * budget_factor)
+    if state.user_team.board_confidence <= 15:
+        message += " Hay riesgo de destitución."
+    review = {
+        "target": target, "position": pos, "met": met,
+        "confidence_before": before, "confidence_after": state.user_team.board_confidence,
+        "transfer_budget_after": state.user_team.transfer_budget,
+        "message": message,
+    }
+    state.board_review = review
+    state.inbox.append({"date": state.date, "from": "Junta Directiva", "subject": "Revisión de temporada",
+                        "body": f"{message} Objetivo: {target}º · Posición: {pos}º."})
+    return review
+
+
 def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = None) -> None:
+    if state.cup_active:
+        simulate_cup_remaining(state)
     if state.competition == "DHA":
         play_final_four(state, user_lineup_ids)
         table = league_table(state.teams, "DHA")
@@ -605,6 +719,7 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
         state.playout = {}
     state.phase = "season_end"
     state.date = f"{int(state.season[:4]) + 1}-06-30"
+    _board_review(state)
     state.history.append(season_summary(state))
     champ = season_summary(state).get("champion") or "—"
     state.inbox.append({
@@ -644,29 +759,10 @@ def season_summary(state: GameState) -> dict:
         "playout": state.playout,
         "promoted": promoted_names,
         "relegated": relegated_names,
+        "cup_winner": state.teams[state.cup_winner_id].name if state.cup_winner_id in state.teams else None,
+        "board_review": state.board_review,
         "direct_relegated": state.teams[state.playout["direct_relegated_id"]].name if state.playout.get("direct_relegated_id") in state.teams else None,
     }
-
-
-def _youth_player(team: TeamState, rng: random.Random, seq: int, new_year: int) -> PlayerState:
-    pos = rng.choice(["Portero", "Central", "Lateral", "Medio", "Delantero"])
-    group = "Portero" if pos == "Portero" else ("Defensa" if pos in ("Central", "Lateral") else pos)
-    keys = ["control", "pase", "conduccion", "golpeo", "flick", "regate_3d", "definicion",
-            "aerial", "pc_injection", "pc_trap", "pc_flick", "pc_deflection", "pc_first_runner",
-            "pc_gk_save", "stroke_shot", "stroke_save", "free_hit", "posicionamiento", "pressing",
-            "cobertura", "transicion", "desmarque", "velocidad", "resistencia", "fuerza", "agilidad",
-            "coordinacion", "decisiones", "concentracion", "competitividad", "liderazgo", "reflejos",
-            "blocaje", "distribucion", "uno_vs_uno", "alto", "rebote_gk"]
-    attrs = {k: rng.randint(40, 64) for k in keys}
-    overall = round(rng.uniform(48, 62), 1)
-    return PlayerState(
-        id=f"{team.id}-youth-{new_year}-{seq}", name=f"Canterano {seq}", team_name=team.name,
-        position_group=group, subposition=pos, age=rng.randint(18, 21),
-        overall=overall, potential=round(overall + rng.uniform(6, 18), 1), attributes=attrs,
-        archetype="Canterano", perfil="Jugador", goals_isquad=0,
-        value=int(overall * 5000), polivalencia=0.0,
-        salary=int(rng.uniform(8000, 16000)), contract_until=f"{new_year + 2}-06-30",
-    )
 
 
 def advance_to_next_season(state: GameState) -> None:
@@ -698,8 +794,18 @@ def advance_to_next_season(state: GameState) -> None:
             p.form = 6.5
             kept.append(p)
         team.players = kept
+        develop_youth(team, rng, new_year)
+        intake(team, rng, new_year)
         while len(team.players) < 18:
-            team.players.append(_youth_player(team, rng, len(team.players) + 1, new_year))
+            if team.youth:
+                p = team.youth.pop(0)
+                p.perfil = "Jugador"
+                p.team_name = team.name
+                team.players.append(p)
+            else:
+                p = generate_youth(team, rng, new_year, len(team.players) + 1, age=18)
+                p.perfil = "Jugador"
+                team.players.append(p)
         team.played = team.won = team.drawn = team.lost = 0
         team.goals_for = team.goals_against = team.points = 0
         team.finance_log = []
@@ -728,6 +834,7 @@ def advance_to_next_season(state: GameState) -> None:
     state.market_offers_round = 0
     state.promoted_ids = []
     state.relegated_ids = []
+    new_cup(state)
     state.inbox.append({
         "date": state.date, "from": "Junta Directiva",
         "subject": f"Temporada {state.season} · {state.competition}",

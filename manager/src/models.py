@@ -219,6 +219,9 @@ class TeamState:
     stadium_name: str = ""
     stadium_capacity: int = 1000
     board_expectation: str = ""
+    board_patience: int = 3
+    board_pressure: str = "media"
+    academy_rating: int = 60
     preferred_mode: str = ""
     budget: int = 0
     wage_budget: int = 0
@@ -234,6 +237,7 @@ class TeamState:
     transfer_budget: int = 0
     club_tier: int = 3
     finance_log: list[dict] = field(default_factory=list)
+    youth: list[PlayerState] = field(default_factory=list)
     last_lineup: list[str] = field(default_factory=list)
     played: int = 0
     won: int = 0
@@ -391,6 +395,9 @@ class TeamState:
             "stadium_name": self.stadium_name,
             "stadium_capacity": self.stadium_capacity,
             "board_expectation": self.board_expectation,
+            "board_patience": self.board_patience,
+            "board_pressure": self.board_pressure,
+            "academy_rating": self.academy_rating,
             "preferred_mode": self.preferred_mode,
             "budget": self.budget,
             "wage_budget": self.wage_budget,
@@ -406,6 +413,7 @@ class TeamState:
             "transfer_budget": self.transfer_budget,
             "club_tier": self.club_tier,
             "finance_log": self.finance_log,
+            "youth": [p.to_dict() for p in self.youth],
             "last_lineup": self.last_lineup,
             "played": self.played,
             "won": self.won,
@@ -423,7 +431,9 @@ class TeamState:
             players=[PlayerState.from_dict(p) for p in d["players"]],
             tactics=Tactics.from_dict(d.get("tactics", {})),
             stadium_name=d.get("stadium_name", ""), stadium_capacity=d.get("stadium_capacity", 1000),
-            board_expectation=d.get("board_expectation", ""), preferred_mode=d.get("preferred_mode", ""),
+            board_expectation=d.get("board_expectation", ""),
+            board_patience=d.get("board_patience", 3), board_pressure=d.get("board_pressure", "media"),
+            academy_rating=d.get("academy_rating", 60), preferred_mode=d.get("preferred_mode", ""),
             budget=d.get("budget", 0), wage_budget=d.get("wage_budget", 0),
             board_confidence=d.get("board_confidence", 60), fan_confidence=d.get("fan_confidence", 60),
             morale=d.get("morale", 12), cohesion=d.get("cohesion", 12),
@@ -433,7 +443,9 @@ class TeamState:
             staff=[StaffMember.from_dict(m) for m in d.get("staff", [])],
             board=[BoardMember.from_dict(m) for m in d.get("board", [])],
             transfer_budget=d.get("transfer_budget", 0), club_tier=d.get("club_tier", 3),
-            finance_log=d.get("finance_log", []), last_lineup=d.get("last_lineup", []),
+            finance_log=d.get("finance_log", []),
+            youth=[PlayerState.from_dict(p) for p in d.get("youth", [])],
+            last_lineup=d.get("last_lineup", []),
             played=d.get("played", 0), won=d.get("won", 0),
             drawn=d.get("drawn", 0), lost=d.get("lost", 0),
             goals_for=d.get("goals_for", 0), goals_against=d.get("goals_against", 0),
@@ -494,6 +506,12 @@ class GameState:
     market_offers_round: int = 0
     promoted_ids: list[str] = field(default_factory=list)
     relegated_ids: list[str] = field(default_factory=list)
+    cup_round: int = 0
+    cup_active: bool = False
+    cup_winner_id: str = ""
+    press_done_round: int = 0
+    press_history: list[dict[str, Any]] = field(default_factory=list)
+    board_review: dict[str, Any] = field(default_factory=dict)
 
     @property
     def total_rounds(self) -> int:
@@ -549,6 +567,12 @@ class GameState:
             "market_offers_round": self.market_offers_round,
             "promoted_ids": self.promoted_ids,
             "relegated_ids": self.relegated_ids,
+            "cup_round": self.cup_round,
+            "cup_active": self.cup_active,
+            "cup_winner_id": self.cup_winner_id,
+            "press_done_round": self.press_done_round,
+            "press_history": self.press_history,
+            "board_review": self.board_review,
         }
 
     @classmethod
@@ -573,4 +597,9 @@ class GameState:
             market_offers_round=d.get("market_offers_round", 0),
             promoted_ids=d.get("promoted_ids", []),
             relegated_ids=d.get("relegated_ids", []),
+            cup_round=d.get("cup_round", 0), cup_active=d.get("cup_active", False),
+            cup_winner_id=d.get("cup_winner_id", ""),
+            press_done_round=d.get("press_done_round", 0),
+            press_history=d.get("press_history", []),
+            board_review=d.get("board_review", {}),
         )

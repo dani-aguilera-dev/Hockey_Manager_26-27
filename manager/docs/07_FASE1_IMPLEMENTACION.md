@@ -22,6 +22,7 @@
 - Gestionar **finanzas**: caja, presupuesto de fichajes, salarios, patrocinio, taquilla y viajes.
 - Usar el **mercado**: buscar jugadores, hacer ofertas, renovar contratos, contratar/despedir staff y recibir ofertas.
 - Continuar **varias temporadas**, con ascensos, descensos y DHA/DHB.
+- Jugar la **Copa del Rey**, gestionar la **cantera**, responder a la **prensa** y revisar la **junta directiva**.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -60,7 +61,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **36 tests superados**.
+Resultado esperado: **40 tests superados**.
 
 ---
 
@@ -243,6 +244,7 @@ Al terminar la jornada 22:
 - `test_training.py`: plan automático, recuperación, entrenamiento semanal, IA y guardado del estado.
 - `test_staff_finance.py`: staff, junta, salarios, cierre financiero y resumen.
 - `test_market.py`: ventanas, fichajes, contratos, staff, ofertas y multi-temporada.
+- `test_phase4.py`: Copa, cantera, prensa y revisión de la junta.
 
 Comando:
 
@@ -261,6 +263,8 @@ python3 -m pytest src/tests -q
 - El entrenamiento es semanal y grupal; no hay sesiones individuales, mercado, cantera, prensa ni multi-temporada.
 - El mercado no incluye cesiones, cláusulas, agentes ni primas por objetivos.
 - La DHB de multi-temporada es una liga simplificada de 16 equipos.
+- La Copa no tiene doble partido ni cabezas de serie.
+- La cantera y la prensa son sistemas simplificados.
 - Parte del staff y de la junta son nombres de modelo, no datos oficiales.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
 - La IA de viaje usa equilibrado/barato; no negocia hoteles ni vuelos.
@@ -285,6 +289,8 @@ python3 -m pytest src/tests -q
 | Finanzas de jornada y salarios | Cumplido |
 | Mercado, contratos y staff | Cumplido |
 | Multi-temporada DHA/DHB | Cumplido (DHB simplificada) |
+| Copa del Rey | Cumplido |
+| Cantera, prensa y junta dinámica | Cumplido |
 | Sin errores de consola | Cumplido en pruebas y simulación |
 
 ---

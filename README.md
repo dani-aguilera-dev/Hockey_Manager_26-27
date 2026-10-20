@@ -47,7 +47,7 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, logística, clasificación, Final Four, playout y guardado/carga.
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, Copa del Rey, cantera, prensa, junta dinámica, logística, clasificación, Final Four, playout y guardado/carga.
 
 - [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.
@@ -62,6 +62,7 @@ El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Fo
 - [`manager/docs/09_ENTRENAMIENTO_SEMANAL.md`](manager/docs/09_ENTRENAMIENTO_SEMANAL.md) — entrenamiento semanal y plan automático.
 - [`manager/docs/10_STAFF_Y_FINANZAS.md`](manager/docs/10_STAFF_Y_FINANZAS.md) — staff, junta y finanzas.
 - [`manager/docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`](manager/docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md) — mercado, contratos y multi-temporada.
+- [`manager/docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](manager/docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
 
 ```bash
 cd manager && python3 run.py

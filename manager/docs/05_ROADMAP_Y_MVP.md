@@ -123,6 +123,8 @@ Añade:
 
 ### Fase 4 — Profundidad y pulido
 
+**Estado:** implementada parcialmente (2026-10-20). Copa, cantera, prensa y junta dinámica ya están en el juego. Ver `12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`.
+
 Añade:
 
 - Copa del Rey.

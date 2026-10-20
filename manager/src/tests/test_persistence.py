@@ -25,6 +25,7 @@ def test_sqlite_roundtrip():
         assert loaded.user_team.players[0].salary == state.user_team.players[0].salary
         assert loaded.user_team.finance_log == state.user_team.finance_log
         assert loaded.finance_round == state.finance_round
+        assert len(loaded.user_team.youth) == len(state.user_team.youth)
 
 
 def test_training_state_roundtrip():

@@ -20,6 +20,9 @@ from .training import (SESSION_TYPES, SESSION_ORDER, DAYS, PLAN_PRESETS,
                        auto_plan, apply_training_plan, format_plan, plan_name)
 from .persistence import DEFAULT_DB, save_game, load_game, list_saves
 from .finance import financial_summary, sponsor_income
+from .youth import promote_youth, release_youth
+from .press import press_questions, answer_press, mark_press_done
+from .cup import cup_status_text, cup_round_fixtures, cup_next_user_fixture, ROUND_NAMES
 from .market import (market_window, market_window_text, market_players, asking_price,
                      scout_range, make_transfer_offer, generate_incoming_offers,
                      accept_incoming_offer, reject_incoming_offer, renew_contract,
@@ -230,6 +233,9 @@ class GameUI:
             print("  E. Entrenamiento semanal")
             print("  S. Staff y junta directiva")
             print("  M. Mercado y contratos")
+            print("  C. Copa del Rey")
+            print("  P. Rueda de prensa")
+            print("  K. Cantera")
             print("  A. Simular jornada (auto)")
             op = ask("\n  > ").lower()
             if op == "1":
@@ -257,6 +263,12 @@ class GameUI:
                 self.staff_screen()
             elif op == "m":
                 self.market_screen()
+            elif op == "c":
+                self.cup_screen()
+            elif op == "p":
+                self.press_screen()
+            elif op == "k":
+                self.cantera_screen()
             elif op == "a":
                 self.auto_round()
             else:
@@ -283,11 +295,13 @@ class GameUI:
         print(f"Posición: {pos}º/{len(table)} · {t.points} pts · {t.played} PJ · {t.won}G {t.drawn}E {t.lost}P · GF {t.goals_for} / GC {t.goals_against}")
         print(f"Forma: {self.form_string()} · Moral: {t.morale}/20 · Junta: {t.board_confidence}/100 · Afición: {t.fan_confidence}/100")
         mg = t.management_profile()
-        print(f"Gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión: {t.cohesion}/20 · Mánager: {t.manager_rating}/100")
+        print(f"Gestión: {mg['score']:.0f}/100 (bonus {mg['bonus']:+.1f}) · Cohesión: {t.cohesion}/20 · Mánager: {t.manager_rating}/100 · Junta: {t.board_confidence}/100")
+        print(f"Presión de la junta: {t.board_pressure} · Paciencia: {t.board_patience}/5")
         if s.week_trained:
             print(f"Entrenamiento: planificado ({plan_name(s.weekly_plan)}) · Preparación rival +{t.prep_bonus:.1f} · Segundo entrenador {t.assistant_rating}/100")
         else:
             print(f"Entrenamiento: pendiente · [E] planificar la semana · Segundo entrenador {t.assistant_rating}/100")
+        print(f"Copa del Rey: {cup_status_text(s)}")
         print(f"Caja: {money(t.budget)} · Fichajes: {money(t.transfer_budget)} · Salarios: {money(t.player_wage_bill())} + staff {money(t.staff_wage_bill())}")
         inj = sum(1 for p in t.players if p.injury > 0)
         sus = sum(1 for p in t.players if p.suspension > 0)
@@ -535,7 +549,7 @@ class GameUI:
                            "tesorero": "Tesorero", "vocal_hockey": "Vocal de hockey", "vocal_social": "Vocal social"}
             for m in t.board:
                 print(f"{board_roles.get(m.role, m.role):<22} {short(m.name,34):<34} {m.source} ({m.confidence})")
-            print(f"\n  Objetivo: {t.board_expectation} · Confianza: {t.board_confidence}/100")
+            print(f"\n  Objetivo: {t.board_expectation} · Confianza: {t.board_confidence}/100 · Presión: {t.board_pressure} · Paciencia: {t.board_patience}/5")
             print("\n  [H] Contratar staff   [F] Despedir staff   [V] Volver")
             op = ask("  > ").lower()
             if op in ("v", ""):
@@ -714,6 +728,109 @@ class GameUI:
         result = renew_contract(s, player.id, salary, years)
         print("\n" + result["message"])
         pause()
+
+    # ------------------------------------------------------------- cantera
+    def cantera_screen(self):
+        t = self.state.user_team
+        while True:
+            header(f"CANTERA · {t.name.upper()}")
+            print(f"Academia: {t.academy_rating}/100 · Jugadores en cantera: {len(t.youth)}")
+            if not t.youth:
+                print("\nNo hay jugadores en la cantera. Llegarán nuevas generaciones al final de temporada.")
+                pause()
+                return
+            print(f"{'#':>3}  {'Jugador':<28} {'Pos':<9} {'Edad':>4} {'OVR':>5} {'Potencial':>9} {'Salario':>9} {'Contrato':<12}")
+            line()
+            for i, p in enumerate(t.youth, 1):
+                print(f"{i:>3}  {short(p.name,28):<28} {p.subposition:<9} {p.age:>4} {p.overall:>5.1f} {p.potential:>9.1f} {money(p.salary):>9} {p.contract_until:<12}")
+            print("\n  [P] Promover al primer equipo   [R] Liberar   [V] Volver")
+            op = ask("  > ").lower()
+            if op in ("v", ""):
+                return
+            if op in ("p", "r"):
+                raw = ask("Número de jugador: ")
+                if not raw.isdigit() or not (1 <= int(raw) <= len(t.youth)):
+                    continue
+                p = t.youth[int(raw) - 1]
+                if op == "p":
+                    ok, msg = promote_youth(t, p.id)
+                else:
+                    ok, msg = release_youth(t, p.id)
+                print("\n" + msg)
+                pause()
+
+    # ------------------------------------------------------------- prensa
+    def press_screen(self):
+        s = self.state
+        if s.press_done_round == s.round:
+            header("PRENSA · RUEDA COMPLETADA")
+            for item in s.press_history[-3:]:
+                print(f"  J{item['round']}: {item['headline']}")
+            pause()
+            return
+        header("RUEDA DE PRENSA")
+        for q in press_questions(s):
+            print(f"\n  {q['question']}")
+            for i, (label, _, _) in enumerate(q["options"], 1):
+                print(f"    {i}. {label}")
+            raw = ask("  Respuesta (Enter = 1): ")
+            idx = int(raw) - 1 if raw.isdigit() and 1 <= int(raw) <= len(q["options"]) else 0
+            result = answer_press(s, q["id"], idx)
+            print(f"  → {result['message']}")
+        mark_press_done(s)
+        pause()
+
+    # ------------------------------------------------------------- copa
+    def cup_screen(self):
+        s = self.state
+        while True:
+            header(f"COPA DEL REY · {cup_status_text(s)}")
+            if not s.cup_active:
+                if s.cup_winner_id in s.teams:
+                    print(f"Campeón: {s.teams[s.cup_winner_id].name}")
+                else:
+                    print("La Copa ha finalizado.")
+                pause()
+                return
+            fixtures = cup_round_fixtures(s)
+            section(f"{ROUND_NAMES.get(s.cup_round, 'Ronda')} · {len(fixtures)} partidos")
+            for f in fixtures:
+                h = s.teams.get(f.home_id)
+                a = s.teams.get(f.away_id)
+                score = f"{f.home_goals}-{f.away_goals}" if f.played else "vs"
+                print(f"  {short(h.name if h else '—',32):<32} {score:^7} {short(a.name if a else '—',32)}")
+            user_fx = cup_next_user_fixture(s)
+            if user_fx:
+                print(f"\nTu partido: {s.teams[user_fx.home_id].name} vs {s.teams[user_fx.away_id].name}")
+            elif s.club_id not in [f.home_id for f in fixtures] + [f.away_id for f in fixtures]:
+                print("\nTu equipo ya no está en la Copa.")
+            print("\n  [J] Jugar ronda   [S] Simular ronda   [A] Simular copa entera   [V] Volver")
+            op = ask("  > ").lower()
+            if op in ("v", ""):
+                return
+            if op == "a":
+                from .season import simulate_cup_remaining
+                simulate_cup_remaining(s)
+                print("\nCopa completada.")
+                pause()
+                continue
+            if op in ("j", "s"):
+                from .season import simulate_cup_round
+                payload = simulate_cup_round(s, s.manual_lineup or None)
+                if payload:
+                    self.print_cup_report(payload)
+                    pause()
+                else:
+                    print("\nRonda simulada.")
+                    pause()
+                continue
+
+    def print_cup_report(self, p: dict):
+        header(f"COPA · {p['home_name'].upper()} {p['home_goals']}-{p['away_goals']} {p['away_name'].upper()}")
+        print(f"{fmt_date(p['date'])} · {p['result']} ({p['user_goals']}-{p['user_against']})")
+        for e in p.get("events", []):
+            if e.get("type") in ("goal", "card", "injury", "substitution"):
+                print(f"  {e.get('minute', 0):02d}' {e.get('text', '')}")
 
     # ------------------------------------------------------------- partido
     def matchday(self):
@@ -1166,9 +1283,16 @@ class GameUI:
         summ = season_summary(s)
         header(f"FIN DE TEMPORADA · {s.season}")
         print(f"Campeón de {summ.get('competition', s.competition)}: {summ.get('champion') or '—'}")
+        print(f"Campeón de Copa: {summ.get('cup_winner') or '—'}")
         print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/{len(summ.get('table', []))}")
         mg = s.user_team.management_profile()
         print(f"Gestión final: {mg['score']:.1f}/100 (bonus {mg['bonus']:+.2f}) · Cohesión {s.user_team.cohesion}/20 · Mánager {s.user_team.manager_rating}/100")
+        br = summ.get("board_review") or {}
+        if br:
+            section("REVISIÓN DE LA JUNTA")
+            print(f"  Objetivo: {br.get('target')}º · Posición: {br.get('position')}º · {'Cumplido' if br.get('met') else 'No cumplido'}")
+            print(f"  Confianza: {br.get('confidence_before')} → {br.get('confidence_after')}/100 · Presupuesto de fichajes: {money(br.get('transfer_budget_after', 0))}")
+            print(f"  {br.get('message', '')}")
         section("CLASIFICACIÓN FINAL")
         print(f"{'#':>3}  {'Equipo':<40} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         for row in summ.get("table", []):
