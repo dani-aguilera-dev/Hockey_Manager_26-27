@@ -6,45 +6,56 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 
 - **Diseño:** completo en `docs/`.
 - **Datos:** 29 clubes, 16 ciudades, 976 perfiles, 37 atributos.
-- **Prototipo:** vertical slice en `src/prototype.py`.
-- **Juego completo:** pendiente de implementación por fases.
+- **Fase 1 (vertical slice):** implementada. Una temporada DHA jugable, con partidos de texto, logística, clasificación, Final Four, playout y guardado/carga.
+- **Fases 2–4:** pendientes (entrenamiento, mercado, staff, multi-temporada, DHB completa).
 
 ## Inicio rápido
 
-```bash
-cd /home/daniel/hockey_espana/manager/src
-python3 prototype.py --demo
-```
-
-Modo interactivo:
+Desde `manager/`:
 
 ```bash
-python3 prototype.py
+python3 run.py
 ```
 
-Simular una temporada con un club:
+Modo interactivo con una base de datos alternativa:
 
 ```bash
-python3 prototype.py --club "CD TERRASSA HOCKEY" --auto
+python3 run.py --db /ruta/mi_partida.db
 ```
 
-El prototipo:
+Simular una temporada completa sin interacción:
 
-- carga clubes, ciudades y jugadores;
-- muestra el dossier del club;
-- genera un calendario DHA;
-- simula partidos con comentario de texto;
-- muestra la clasificación;
-- calcula la logística del próximo desplazamiento.
+```bash
+python3 run.py --auto --club cd-terrassa --seed 7
+```
+
+Pruebas:
+
+```bash
+python3 -m pytest src/tests -q
+```
+
+La Fase 1 incluye:
+
+- selección de club y dossier;
+- dashboard;
+- plantilla y ficha de jugador;
+- táctica, once automático y once manual;
+- calendario DHA de 22 jornadas y 132 partidos;
+- motor de partido por fases con comentario de texto;
+- logística con bus/tren/avión, coste y fatiga;
+- clasificación, Final Four y playout;
+- guardado/carga SQLite.
 
 No incluye todavía:
 
+- entrenamiento semanal;
 - mercado de fichajes;
-- entrenamiento;
-- moral;
-- junta;
-- finanzas completas;
-- DHB;
+- cantera;
+- staff;
+- prensa compleja;
+- finanzas completas con salarios;
+- liga DHB completa;
 - multi-temporada.
 
 ## Estructura
@@ -69,7 +80,17 @@ manager/
   schema/
     schema.sql
   src/
-    prototype.py
+    main.py
+    ui.py
+    models.py
+    data_loader.py
+    calendar.py
+    match_engine.py
+    logistics.py
+    season.py
+    persistence.py
+    tests/
+    prototype.py        # prototipo legado, se conserva como referencia
   saves/
 ```
 
@@ -82,6 +103,7 @@ manager/
 5. [`docs/04_UI_TEXTO.md`](docs/04_UI_TEXTO.md) — pantallas, comandos y flujo de interfaz.
 6. [`docs/05_ROADMAP_Y_MVP.md`](docs/05_ROADMAP_Y_MVP.md) — fases, backlog y criterios de aceptación.
 7. [`docs/06_MODELO_DATOS.md`](docs/06_MODELO_DATOS.md) — tablas, atributos, eventos y guardado.
+8. [`docs/07_FASE1_IMPLEMENTACION.md`](docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor, pruebas y limitaciones de la Fase 1.
 
 ## Datos
 
@@ -102,13 +124,13 @@ manager/
 
 ## Próximo paso
 
-Implementar la Fase 1 del roadmap:
+Fase 2 del roadmap:
 
-1. `models.py` y `data_loader.py`.
-2. Dashboard y navegación.
-3. Calendario DHA.
-4. Motor de partido por fases.
-5. Guardado/carga.
+1. Entrenamiento semanal y desarrollo.
+2. Moral y dinámica de grupo.
+3. Junta, objetivos y finanzas completas.
+4. Logística avanzada.
+5. Simulación de DHB para playout y ascensos reales.
 
 ## Aviso
 

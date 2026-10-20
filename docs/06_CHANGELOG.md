@@ -1,5 +1,48 @@
 # Changelog
 
+## 2026-10-20 — Fase 1 del juego de gestión (DHA)
+
+### Añadido
+
+- Juego de gestión de texto para DHA 2026-27:
+  - selección de club y dossier;
+  - dashboard;
+  - plantilla y ficha de jugador;
+  - táctica y once automático/manual;
+  - calendario de 22 jornadas y 132 partidos;
+  - motor de partido por fases con comentario por cuartos;
+  - logística con bus, tren y avión; coste y fatiga;
+  - clasificación, Final Four y playout;
+  - guardado/carga SQLite y exportación JSON.
+- Módulos `manager/src/`: `models.py`, `data_loader.py`, `calendar.py`, `match_engine.py`, `logistics.py`, `season.py`, `persistence.py`, `ui.py`, `main.py`.
+- Documento `manager/docs/07_FASE1_IMPLEMENTACION.md`.
+- 12 tests en `manager/src/tests/`.
+
+### Cambiado
+
+- `manager/README.md` y `README.md` actualizados con la Fase 1.
+- La autoalineación rota jugadores con fatiga alta.
+- El motor usa 64 momentos (4 cuartos × 16) y calibra ≈5,0–5,3 goles por partido.
+- El guardado usa un blob JSON dentro de SQLite para el MVP.
+
+### Archivos
+
+- `manager/run.py`
+- `manager/src/*.py`
+- `manager/src/tests/*.py`
+- `manager/docs/07_FASE1_IMPLEMENTACION.md`
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 12 tests superados.
+
+---
+
 ## 2026-10-19 — Tercera ronda de posiciones (DHB y 1ª Andaluza)
 
 ### Añadido

@@ -27,3 +27,6 @@ Thumbs.db
 # Bloqueos de LibreOffice
 .~lock.*
 *.xlsx#
+
+# Pytest
+.pytest_cache/

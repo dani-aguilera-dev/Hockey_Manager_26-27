@@ -47,9 +47,9 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un diseño completo y un prototipo de juego de entrenador/gestión, solo texto, inspirado en Football Manager:
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos, logística, clasificación, Final Four, playout y guardado/carga.
 
-- [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el prototipo.
+- [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.
 - [`manager/docs/01_MOTOR_PARTIDO.md`](manager/docs/01_MOTOR_PARTIDO.md) — motor de partido.
 - [`manager/docs/02_LOGISTICA.md`](manager/docs/02_LOGISTICA.md) — viajes, costes y fatiga.
@@ -57,9 +57,16 @@ El proyecto incluye un diseño completo y un prototipo de juego de entrenador/ge
 - [`manager/docs/04_UI_TEXTO.md`](manager/docs/04_UI_TEXTO.md) — interfaz de texto.
 - [`manager/docs/05_ROADMAP_Y_MVP.md`](manager/docs/05_ROADMAP_Y_MVP.md) — roadmap.
 - [`manager/docs/06_MODELO_DATOS.md`](manager/docs/06_MODELO_DATOS.md) — modelo de datos y guardado.
+- [`manager/docs/07_FASE1_IMPLEMENTACION.md`](manager/docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor y pruebas de la Fase 1.
 
 ```bash
-cd manager/src && python3 prototype.py --demo
+cd manager && python3 run.py
+```
+
+Simulación automática de una temporada:
+
+```bash
+cd manager && python3 run.py --auto --club cd-terrassa --seed 7
 ```
 
 ## Documentación

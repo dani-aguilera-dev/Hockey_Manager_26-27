@@ -41,7 +41,11 @@ Después añadir profundidad: entrenamiento, moral, finanzas, mercado, cantera, 
 
 ### Fase 1 — Vertical slice (MVP)
 
+**Estado:** implementada (2026-10-20). Ver `07_FASE1_IMPLEMENTACION.md`.
+
 **Objetivo:** una temporada jugable con un club, partidos de texto y logística básica.
+
+**Nota:** la Fase 1 incluye ya una versión automática de Final Four y playout. La Fase 4 los convertirá en eliminatorias interactivas y completas.
 
 Incluye:
 
