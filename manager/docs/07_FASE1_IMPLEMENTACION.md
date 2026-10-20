@@ -17,6 +17,7 @@
 - Jugar el partido en **directo**: cuarto a cuarto o minuto a minuto, con estadísticas, jugadores, cambios y táctica en vivo.
 - Dar una **charla de vestuario** al descanso o delegarla en el segundo entrenador.
 - Enfrentarte a una **IA reactiva** que ajusta táctica y cambios según el marcador y la fatiga.
+- Planificar el **entrenamiento semanal** o delegarlo en el segundo entrenador, con plan automático y editor de sesiones.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -55,7 +56,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **21 tests superados**.
+Resultado esperado: **26 tests superados**.
 
 ---
 
@@ -235,6 +236,7 @@ Al terminar la jornada 22:
 - `test_models.py`: autoalineación, formaciones y modificadores.
 - `test_season.py`: temporada completa, Final Four, playout y once manual.
 - `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo, recompensa de gestión, charla de vestuario y IA reactiva.
+- `test_training.py`: plan automático, recuperación, entrenamiento semanal, IA y guardado del estado.
 
 Comando:
 
@@ -250,7 +252,7 @@ python3 -m pytest src/tests -q
 - Solo DHA; DHB y 1ª Andaluza no tienen liga simulada.
 - Final Four y playout se simulan automáticamente; no tienen previa interactiva.
 - No se puede guardar la partida en mitad del partido.
-- No hay entrenamiento, mercado, cantera, staff, prensa ni multi-temporada.
+- El entrenamiento es semanal y grupal; no hay sesiones individuales, staff especializado, mercado, cantera, prensa ni multi-temporada.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
 - La IA de viaje usa equilibrado/barato; no negocia hoteles ni vuelos.
 - El motor es lúdico y explicable, no una simulación física.
@@ -269,6 +271,7 @@ python3 -m pytest src/tests -q
 | Guardado y carga | Cumplido |
 | Partido en directo con decisiones | Cumplido |
 | La gestión influye en el rendimiento | Cumplido |
+| Entrenamiento semanal con plan automático | Cumplido |
 | Sin errores de consola | Cumplido en pruebas y simulación |
 
 ---

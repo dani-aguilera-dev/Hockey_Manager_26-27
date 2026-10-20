@@ -47,7 +47,7 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, charla de vestuario, IA reactiva, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
 
 - [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.
@@ -59,6 +59,7 @@ El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Fo
 - [`manager/docs/06_MODELO_DATOS.md`](manager/docs/06_MODELO_DATOS.md) — modelo de datos y guardado.
 - [`manager/docs/07_FASE1_IMPLEMENTACION.md`](manager/docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor y pruebas de la Fase 1.
 - [`manager/docs/08_MODO_DIRECTO_Y_GESTION.md`](manager/docs/08_MODO_DIRECTO_Y_GESTION.md) — partido en directo y recompensa a la gestión.
+- [`manager/docs/09_ENTRENAMIENTO_SEMANAL.md`](manager/docs/09_ENTRENAMIENTO_SEMANAL.md) — entrenamiento semanal y plan automático.
 
 ```bash
 cd manager && python3 run.py

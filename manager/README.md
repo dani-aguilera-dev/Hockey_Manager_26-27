@@ -47,6 +47,7 @@ La Fase 1 incluye:
 - **charla de vestuario** al descanso, con opción de delegar en el segundo entrenador;
 - **IA reactiva** que ajusta táctica y cambios según el marcador, la fatiga y tu planteamiento;
 - **sistema de gestión**: moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager que otorgan un bonus de hasta ±7 puntos;
+- **entrenamiento semanal**: plan automático del segundo entrenador, editor de sesiones, recuperación y preparación del rival;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.
@@ -109,6 +110,7 @@ manager/
 7. [`docs/06_MODELO_DATOS.md`](docs/06_MODELO_DATOS.md) — tablas, atributos, eventos y guardado.
 8. [`docs/07_FASE1_IMPLEMENTACION.md`](docs/07_FASE1_IMPLEMENTACION.md) — implementación, comandos, motor, pruebas y limitaciones de la Fase 1.
 9. [`docs/08_MODO_DIRECTO_Y_GESTION.md`](docs/08_MODO_DIRECTO_Y_GESTION.md) — partido en directo y recompensa a la buena gestión.
+10. [`docs/09_ENTRENAMIENTO_SEMANAL.md`](docs/09_ENTRENAMIENTO_SEMANAL.md) — entrenamiento semanal, plan automático y preparación del rival.
 
 ## Datos
 

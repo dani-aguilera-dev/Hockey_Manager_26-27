@@ -12,6 +12,7 @@ from .data_loader import load_teams
 from .calendar import create_dha_fixtures, recompute_table, dha_table
 from .logistics import travel_options, apply_travel
 from .match_engine import MatchEngine, MatchResult
+from .training import auto_plan, apply_training_plan
 
 DHA_TEAMS = 12
 START_DATE = "2026-09-20"
@@ -49,6 +50,48 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
                  "después se disputarán el Final Four y el playout."),
     })
     return state
+
+
+def _opponent_for_team(state: GameState, team_id: str) -> TeamState | None:
+    for f in state.fixtures:
+        if f.phase == "regular" and f.round == state.round and not f.played:
+            if f.home_id == team_id:
+                return state.teams.get(f.away_id)
+            if f.away_id == team_id:
+                return state.teams.get(f.home_id)
+    return None
+
+
+def ensure_ai_training(state: GameState) -> None:
+    """Entrenamiento automático de los clubes IA para no regalar ventaja al usuario."""
+    if state.phase != "regular" or state.ai_training_round == state.round:
+        return
+    for team in state.teams.values():
+        if team.league != "DHA" or team.id == state.club_id:
+            continue
+        opponent = _opponent_for_team(state, team.id)
+        rng = random.Random(state.seed * 1000 + state.round * 97 + zlib.crc32(team.id.encode("utf-8")) % 10000)
+        plan = auto_plan(team, opponent, rng)
+        apply_training_plan(team, plan, opponent, rng, delegated=True)
+    state.ai_training_round = state.round
+
+
+def ensure_week_training(state: GameState) -> dict | None:
+    """Aplica el plan automático si el usuario no ha entrenado esta semana."""
+    if state.phase != "regular" or state.week_trained:
+        return None
+    fx = state.next_user_fixture()
+    opponent = None
+    if fx:
+        opp_id = fx.away_id if fx.home_id == state.club_id else fx.home_id
+        opponent = state.teams.get(opp_id)
+    rng = random.Random(state.seed * 1000 + state.round * 53 + 7)
+    plan = auto_plan(state.user_team, opponent, rng)
+    report = apply_training_plan(state.user_team, plan, opponent, rng, delegated=True)
+    state.weekly_plan = plan
+    state.training_report = report
+    state.week_trained = True
+    return report
 
 
 def make_lineup(team: TeamState, player_ids: list[str] | None = None) -> tuple[list[PlayerState], list[PlayerState]]:
@@ -175,6 +218,14 @@ def _simulate_fixture(state: GameState, fixture: Fixture, rng: random.Random,
     return result
 
 
+def _reset_week_training(state: GameState) -> None:
+    state.week_trained = False
+    state.weekly_plan = []
+    state.training_report = {}
+    for t in state.teams.values():
+        t.prep_bonus = 0.0
+
+
 def _user_result_payload(state: GameState, fixture: Fixture, result: MatchResult, travel: dict | None) -> dict:
     home = state.teams[fixture.home_id]
     away = state.teams[fixture.away_id]
@@ -197,6 +248,7 @@ def _user_result_payload(state: GameState, fixture: Fixture, result: MatchResult
         "travel": (travel or {}) if not user_is_home else {},
         "home_management": home.management_profile(),
         "away_management": away.management_profile(),
+        "prep_bonus": state.user_team.prep_bonus,
         "shootout": result.shootout, "date": fixture.date,
     }
 
@@ -206,6 +258,8 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     """Simula la jornada regular actual. Devuelve el parte del partido del usuario."""
     if state.phase != "regular":
         return None
+    ensure_week_training(state)
+    ensure_ai_training(state)
     round_no = state.round
     fixtures = [f for f in state.fixtures if f.phase == "regular" and f.round == round_no and not f.played]
     if not fixtures:
@@ -239,6 +293,7 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     # clasificación y recuperación
     recompute_table(state.teams, state.fixtures)
     _recover_after_round(state, old_status)
+    _reset_week_training(state)
     state.round += 1
     if state.round <= 22:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
@@ -270,6 +325,8 @@ def prepare_live_round(state: GameState, user_lineup_ids: list[str] | None = Non
     """
     if state.phase != "regular":
         raise ValueError("La temporada ya ha terminado.")
+    ensure_week_training(state)
+    ensure_ai_training(state)
     round_no = state.round
     fixtures = [f for f in state.fixtures if f.phase == "regular" and f.round == round_no and not f.played]
     if not fixtures:
@@ -360,6 +417,7 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     _update_user_after_match(state, fixture, result)
     recompute_table(state.teams, state.fixtures)
     _recover_after_round(state, ctx.old_status)
+    _reset_week_training(state)
     state.round += 1
     if state.round <= 22:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)

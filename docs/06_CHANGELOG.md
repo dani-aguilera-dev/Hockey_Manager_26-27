@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-10-20 — Entrenamiento semanal con plan automático
+
+### Añadido
+
+- Pantalla de entrenamiento semanal:
+  - plan automático del segundo entrenador;
+  - editor de cinco sesiones;
+  - semana de recuperación de un clic.
+- Nueve tipos de sesión: recuperación, descanso, físico, táctico, set pieces, ataque, defensa, vídeo y activación.
+- Efectos sobre fatiga, forma, moral, cohesión, atributos, lesiones y preparación del rival.
+- El entrenamiento IA se aplica automáticamente cada jornada para no dar ventaja artificial al usuario.
+- `prep_bonus` de preparación del rival aplicado al ataque y la defensa del siguiente partido.
+- Persistencia de `week_trained`, `weekly_plan`, `training_report` y `ai_training_round`.
+- Documento `manager/docs/09_ENTRENAMIENTO_SEMANAL.md`.
+
+### Cambiado
+
+- El dashboard muestra el estado del entrenamiento semanal.
+- Si no se planifica, el segundo entrenador aplica el plan automático antes del partido.
+- `play_round` y `prepare_live_round` garantizan entrenamiento de usuario e IA una vez por jornada.
+- Tests ampliados a 26.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 26 tests superados.
+
+---
+
 ## 2026-10-20 — Charla de vestuario e IA reactiva
 
 ### Añadido

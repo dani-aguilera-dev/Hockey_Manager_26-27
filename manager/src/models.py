@@ -186,6 +186,7 @@ class TeamState:
     cohesion: int = 12
     manager_rating: int = 60
     assistant_rating: int = 60
+    prep_bonus: float = 0.0
     last_lineup: list[str] = field(default_factory=list)
     played: int = 0
     won: int = 0
@@ -340,6 +341,7 @@ class TeamState:
             "cohesion": self.cohesion,
             "manager_rating": self.manager_rating,
             "assistant_rating": self.assistant_rating,
+            "prep_bonus": self.prep_bonus,
             "last_lineup": self.last_lineup,
             "played": self.played,
             "won": self.won,
@@ -362,7 +364,8 @@ class TeamState:
             board_confidence=d.get("board_confidence", 60), fan_confidence=d.get("fan_confidence", 60),
             morale=d.get("morale", 12), cohesion=d.get("cohesion", 12),
             manager_rating=d.get("manager_rating", 60),
-            assistant_rating=d.get("assistant_rating", 60), last_lineup=d.get("last_lineup", []),
+            assistant_rating=d.get("assistant_rating", 60),
+            prep_bonus=d.get("prep_bonus", 0.0), last_lineup=d.get("last_lineup", []),
             played=d.get("played", 0), won=d.get("won", 0),
             drawn=d.get("drawn", 0), lost=d.get("lost", 0),
             goals_for=d.get("goals_for", 0), goals_against=d.get("goals_against", 0),
@@ -412,6 +415,10 @@ class GameState:
     inbox: list[dict[str, Any]] = field(default_factory=list)
     last_result: dict[str, Any] = field(default_factory=dict)
     manual_lineup: list[str] = field(default_factory=list)
+    week_trained: bool = False
+    weekly_plan: list[str] = field(default_factory=list)
+    training_report: dict[str, Any] = field(default_factory=dict)
+    ai_training_round: int = 0
 
     @property
     def user_team(self) -> TeamState:
@@ -451,6 +458,10 @@ class GameState:
             "inbox": self.inbox,
             "last_result": self.last_result,
             "manual_lineup": self.manual_lineup,
+            "week_trained": self.week_trained,
+            "weekly_plan": self.weekly_plan,
+            "training_report": self.training_report,
+            "ai_training_round": self.ai_training_round,
         }
 
     @classmethod
@@ -464,4 +475,8 @@ class GameState:
             playout=d.get("playout", {}), history=d.get("history", []),
             inbox=d.get("inbox", []), last_result=d.get("last_result", {}),
             manual_lineup=d.get("manual_lineup", []),
+            week_trained=d.get("week_trained", False),
+            weekly_plan=d.get("weekly_plan", []),
+            training_report=d.get("training_report", {}),
+            ai_training_round=d.get("ai_training_round", 0),
         )
