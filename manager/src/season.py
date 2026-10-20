@@ -146,9 +146,18 @@ def _simulate_fixture(state: GameState, fixture: Fixture, rng: random.Random,
     if not neutral:
         tr = _travel_for_fixture(state, fixture, user_travel.get("option_id") if user_travel and away.id == state.club_id else None, a_line, a_bench)
         fixture.travel = tr or {}
+    user_side = 0 if fixture.home_id == state.club_id else (1 if fixture.away_id == state.club_id else None)
+    if user_side is None:
+        ai_sides = {0, 1}
+        auto_talk_sides = {0, 1}
+    else:
+        ai_sides = {1 - user_side}
+        auto_talk_sides = {0, 1}  # en simulación rápida el segundo entrenador asume la charla
     engine = MatchEngine(home, away, rng, neutral=neutral, knockout=knockout,
                          home_lineup=h_line, away_lineup=a_line,
-                         home_bench=h_bench, away_bench=a_bench, detailed=True)
+                         home_bench=h_bench, away_bench=a_bench, detailed=True,
+                         ai_sides=ai_sides, auto_talk_sides=auto_talk_sides,
+                         auto_sub_sides={0, 1})
     result = engine.simulate()
     fixture.played = True
     fixture.home_goals = result.home_goals
@@ -310,10 +319,12 @@ def prepare_live_round(state: GameState, user_lineup_ids: list[str] | None = Non
         user_fixture.travel = travel or {}
     idx_user = fixtures.index(user_fixture)
     rng = random.Random(state.seed * 1000 + round_no * 37 + idx_user)
+    ai_side = 1 - user_side
     engine = MatchEngine(home, away, rng, neutral=False, knockout=False,
                          home_lineup=h_line, away_lineup=a_line,
                          home_bench=h_bench, away_bench=a_bench,
-                         detailed=True, auto_sub_sides={1 - user_side})
+                         detailed=True, auto_sub_sides={ai_side},
+                         ai_sides={ai_side}, auto_talk_sides={ai_side})
     return LiveRoundContext(
         fixture=user_fixture, engine=engine, old_status=old_status,
         user_side=user_side, travel=travel if user_side == 1 else None, rng=rng,

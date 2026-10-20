@@ -44,6 +44,8 @@ La Fase 1 incluye:
 - calendario DHA de 22 jornadas y 132 partidos;
 - motor de partido por fases con comentario de texto;
 - **modo directo**: cuarto a cuarto o minuto a minuto, con estadísticas, jugadores, cambios y táctica en vivo;
+- **charla de vestuario** al descanso, con opción de delegar en el segundo entrenador;
+- **IA reactiva** que ajusta táctica y cambios según el marcador, la fatiga y tu planteamiento;
 - **sistema de gestión**: moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager que otorgan un bonus de hasta ±7 puntos;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;

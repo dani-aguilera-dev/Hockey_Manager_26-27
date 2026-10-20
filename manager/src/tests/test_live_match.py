@@ -66,11 +66,59 @@ def test_live_and_quick_produce_same_user_result():
     quick = play_round(quick_state, user_lineup_ids=None, travel_option_id="equilibrado")
     live_state = new_game("cd-terrassa", "Test", seed=303)
     ctx = prepare_live_round(live_state, user_lineup_ids=None, travel_option_id="equilibrado")
+    # misma configuración que la simulación rápida: charla delegada y cambios automáticos
+    ctx.engine.auto_talk_sides = {0, 1}
+    ctx.engine.auto_sub_sides = {0, 1}
     while not ctx.engine.finished:
         ctx.engine.advance_quarter()
     live = finish_live_round(live_state, ctx)
     assert (quick["home_goals"], quick["away_goals"]) == (live["home_goals"], live["away_goals"])
     assert quick["result"] == live["result"]
+
+
+def test_team_talk_and_delegation():
+    teams, engine = _fresh_match()
+    engine.score = [0, 1]
+    result = engine.apply_team_talk(0, "delegar")
+    assert engine.talk_done[0] is True
+    assert result["bonus"] != 0
+    assert any(e["type"] == "talk" for e in engine.events)
+    # solo una charla por equipo
+    again = engine.apply_team_talk(0, "arenga")
+    assert again["bonus"] == 0
+    assert "Ya se ha dado" in again["message"]
+
+
+def test_ai_reactive_tactics():
+    teams, _, _ = load_teams()
+    home = teams["cd-terrassa"]
+    away = teams["ud-taburiente"]
+    engine = MatchEngine(home, away, random.Random(3), ai_sides={0}, auto_talk_sides=set())
+    engine.quarter = 3
+    engine.score = [2, 0]
+    home.manager_rating = 100
+    before_away = (away.tactics.mentality, away.tactics.press, away.tactics.tempo)
+    changed = False
+    for seed in range(30):
+        engine.rng = random.Random(seed)
+        previous = (home.tactics.mentality, home.tactics.press, home.tactics.tempo)
+        engine._ai_adjust(0)
+        if (home.tactics.mentality, home.tactics.press, home.tactics.tempo) != previous:
+            changed = True
+            break
+    assert changed
+    assert home.tactics.mentality in ("defensiva", "muy_defensiva")
+    assert (away.tactics.mentality, away.tactics.press, away.tactics.tempo) == before_away
+    # el lado usuario no está en ai_sides: no se toca
+    before_home = (home.tactics.mentality, home.tactics.press, home.tactics.tempo)
+    engine._ai_adjust(1)
+    assert (home.tactics.mentality, home.tactics.press, home.tactics.tempo) == before_home
+
+
+def test_ai_talk_appears_in_full_match():
+    teams, engine = _fresh_match(seed=77)
+    result = engine.simulate()
+    assert any(e["type"] == "talk" for e in result.events)
 
 
 def test_management_bonus_affects_engine_strength():

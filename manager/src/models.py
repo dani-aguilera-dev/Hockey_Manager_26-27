@@ -185,6 +185,7 @@ class TeamState:
     morale: int = 12
     cohesion: int = 12
     manager_rating: int = 60
+    assistant_rating: int = 60
     last_lineup: list[str] = field(default_factory=list)
     played: int = 0
     won: int = 0
@@ -338,6 +339,7 @@ class TeamState:
             "morale": self.morale,
             "cohesion": self.cohesion,
             "manager_rating": self.manager_rating,
+            "assistant_rating": self.assistant_rating,
             "last_lineup": self.last_lineup,
             "played": self.played,
             "won": self.won,
@@ -359,7 +361,8 @@ class TeamState:
             budget=d.get("budget", 0), wage_budget=d.get("wage_budget", 0),
             board_confidence=d.get("board_confidence", 60), fan_confidence=d.get("fan_confidence", 60),
             morale=d.get("morale", 12), cohesion=d.get("cohesion", 12),
-            manager_rating=d.get("manager_rating", 60), last_lineup=d.get("last_lineup", []),
+            manager_rating=d.get("manager_rating", 60),
+            assistant_rating=d.get("assistant_rating", 60), last_lineup=d.get("last_lineup", []),
             played=d.get("played", 0), won=d.get("won", 0),
             drawn=d.get("drawn", 0), lost=d.get("lost", 0),
             goals_for=d.get("goals_for", 0), goals_against=d.get("goals_against", 0),

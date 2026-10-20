@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-20 — Charla de vestuario e IA reactiva
+
+### Añadido
+
+- Charla de vestuario al descanso:
+  - arenga, calma, exigir, confiar o delegar;
+  - efecto según marcador, moral, fatiga, competitividad y liderazgo;
+  - bonus temporal para el tercer cuarto y reducción para el cuarto final;
+  - delegación en el segundo entrenador, con rating propio por club.
+- IA reactiva:
+  - ajusta mentalidad, presión, bloque, tempo y pase según marcador, fatiga y táctica rival;
+  - hace cambios si el equipo está fundido;
+  - registra los ajustes como eventos `[Ajuste]`.
+- El modo rápido delega automáticamente la charla en el segundo entrenador.
+- Nuevas pruebas de charla, delegación, IA reactiva y eventos.
+
+### Cambiado
+
+- `MatchEngine` acepta `ai_sides` y `auto_talk_sides`.
+- El dashboard, la previa y el parte muestran la gestión y la charla.
+- `TeamState` guarda `assistant_rating` y lo carga desde las instalaciones del club.
+- `manager/docs/08_MODO_DIRECTO_Y_GESTION.md` actualizado.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 21 tests superados.
+
+---
+
 ## 2026-10-20 — Modo directo y recompensa a la gestión
 
 ### Añadido

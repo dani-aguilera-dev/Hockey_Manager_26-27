@@ -15,6 +15,8 @@
 - Elegir once automático o manual.
 - Jugar la temporada regular: 22 jornadas, 132 partidos, ida y vuelta.
 - Jugar el partido en **directo**: cuarto a cuarto o minuto a minuto, con estadísticas, jugadores, cambios y táctica en vivo.
+- Dar una **charla de vestuario** al descanso o delegarla en el segundo entrenador.
+- Enfrentarte a una **IA reactiva** que ajusta táctica y cambios según el marcador y la fatiga.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -53,7 +55,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **18 tests superados**.
+Resultado esperado: **21 tests superados**.
 
 ---
 
@@ -232,7 +234,7 @@ Al terminar la jornada 22:
 - `test_persistence.py`: SQLite y JSON.
 - `test_models.py`: autoalineación, formaciones y modificadores.
 - `test_season.py`: temporada completa, Final Four, playout y once manual.
-- `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo y recompensa de gestión.
+- `test_live_match.py`: simulación por cuartos, cambio manual, jornada en directo, recompensa de gestión, charla de vestuario y IA reactiva.
 
 Comando:
 

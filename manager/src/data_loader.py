@@ -142,6 +142,11 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
             ))
         fin = club.get("finances", {})
         stadium = club.get("stadium", {})
+        fac = club.get("facilities", {})
+        assistant_rating = 50 + int(fac.get("academy", 0) or 0) * 4
+        assistant_rating += 5 if fac.get("video") else 0
+        assistant_rating += 3 if fac.get("medical") else 0
+        assistant_rating = max(45, min(85, assistant_rating))
         teams[club["id"]] = TeamState(
             id=club["id"], name=club["name"], league=club["league"], city=club["city"],
             players=players, tactics=Tactics(),
@@ -149,6 +154,7 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
             stadium_capacity=int(stadium.get("capacity", 1000) or 1000),
             board_expectation=club.get("board", {}).get("expectation", ""),
             preferred_mode=club.get("logistics", {}).get("preferred_mode", ""),
+            assistant_rating=assistant_rating,
             budget=int(fin.get("transfer_budget", 0) or 0),
             wage_budget=int(fin.get("wage_budget", 0) or 0),
         )

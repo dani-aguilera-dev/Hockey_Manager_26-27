@@ -54,7 +54,9 @@ class MatchEngine:
                  home_bench: list[PlayerState] | None = None,
                  away_bench: list[PlayerState] | None = None,
                  detailed: bool = False,
-                 auto_sub_sides: set[int] | None = None):
+                 auto_sub_sides: set[int] | None = None,
+                 ai_sides: set[int] | None = None,
+                 auto_talk_sides: set[int] | None = None):
         self.home = home
         self.away = away
         self.rng = rng
@@ -89,7 +91,11 @@ class MatchEngine:
         self.cards: list[dict[str, Any]] = []
         self._subs = {0: 0, 1: 0}
         self.auto_sub_sides = set(auto_sub_sides) if auto_sub_sides is not None else {0, 1}
+        self.ai_sides = set(ai_sides) if ai_sides is not None else {0, 1}
+        self.auto_talk_sides = set(auto_talk_sides) if auto_talk_sides is not None else set(self.ai_sides)
         self.live_bonus = {0: 0.0, 1: 0.0}
+        self.talk_bonus = {0: 0.0, 1: 0.0}
+        self.talk_done = {0: False, 1: False}
         self.prepared = False
         self.finished = False
         self.result: MatchResult | None = None
@@ -132,10 +138,10 @@ class MatchEngine:
         am = self.away.management_bonus(self.away_lineup)
         ht = self.tactical_matchup_bonus(0)
         at = self.tactical_matchup_bonus(1)
-        ha += hm + ht * 0.8 + self.live_bonus[0]
-        hd += hm + ht * 0.5 + self.live_bonus[0] * 0.5
-        aa += am + at * 0.8 + self.live_bonus[1]
-        ad += am + at * 0.5 + self.live_bonus[1] * 0.5
+        ha += hm + ht * 0.8 + self.live_bonus[0] + self.talk_bonus[0]
+        hd += hm + ht * 0.5 + self.live_bonus[0] * 0.5 + self.talk_bonus[0] * 0.7
+        aa += am + at * 0.8 + self.live_bonus[1] + self.talk_bonus[1]
+        ad += am + at * 0.5 + self.live_bonus[1] * 0.5 + self.talk_bonus[1] * 0.7
         ha += (self.home.morale - 10) * 0.3
         hd += (self.home.morale - 10) * 0.3
         aa += (self.away.morale - 10) * 0.3
@@ -443,6 +449,147 @@ class MatchEngine:
             b += 0.5
         return min(3.0, b)
 
+    def _choose_talk_style(self, side: int) -> str:
+        team = self._team(side)
+        diff = self.score[side] - self.score[1 - side]
+        avg_fatigue = _mean([p.fatigue for p in self._lineup(side)])
+        morale = team.morale
+        if diff < 0:
+            styles = ["arenga", "exigir"] if morale >= 10 else ["arenga", "calma"]
+        elif diff == 0:
+            styles = ["arenga", "calma", "confiar"]
+        else:
+            styles = ["calma", "confiar"] if diff > 1 else ["calma", "exigir", "confiar"]
+        if avg_fatigue > 65:
+            styles.append("calma")
+        return self.rng.choice(styles)
+
+    def apply_team_talk(self, side: int, style: str = "delegar", coach_label: str | None = None) -> dict:
+        """Charla de vestuario. Estilos: arenga, calma, exigir, confiar, delegar/auto."""
+        team = self._team(side)
+        lineup = self._lineup(side)
+        if self.talk_done[side]:
+            return {"style": style, "coach": coach_label or "", "success": False,
+                    "bonus": 0.0, "morale_delta": 0,
+                    "message": "Ya se ha dado la charla de vestuario."}
+        delegated = style in ("delegar", "auto")
+        if delegated:
+            style = self._choose_talk_style(side)
+            coach_label = coach_label or "El segundo entrenador"
+            coach_rating = team.assistant_rating
+        else:
+            coach_label = coach_label or "Tú"
+            coach_rating = team.manager_rating
+        diff = self.score[side] - self.score[1 - side]
+        morale = team.morale
+        avg_fatigue = _mean([p.fatigue for p in lineup])
+        avg_comp = _mean([p.attributes.get("competitividad", 50) for p in lineup])
+        avg_leader = _mean([p.attributes.get("liderazgo", 50) for p in lineup])
+        if style == "arenga":
+            base = 0.55 + (avg_comp - 50) / 200 + (morale - 10) / 50
+            if diff < 0:
+                base += 0.10
+            elif diff > 1:
+                base -= 0.15
+            if morale <= 6:
+                base -= 0.15
+            success_bonus, fail_bonus = 1.4, -0.8
+        elif style == "calma":
+            if diff > 0:
+                base, success_bonus, fail_bonus = 0.68, 0.9, -0.3
+            elif diff == 0:
+                base, success_bonus, fail_bonus = 0.62, 0.5, -0.2
+            else:
+                base, success_bonus, fail_bonus = 0.42, 0.2, -0.4
+            if avg_fatigue > 60:
+                base += 0.08
+        elif style == "exigir":
+            base = 0.50 + (avg_comp - 50) / 150 + (avg_leader - 50) / 200
+            if diff < 0:
+                base += 0.10
+            elif diff > 0:
+                base -= 0.10
+            if morale <= 7:
+                base -= 0.20
+            success_bonus, fail_bonus = 1.8, -1.2
+        else:  # confiar
+            if diff >= 0:
+                base, success_bonus, fail_bonus = 0.66, 0.6, -0.4
+            else:
+                base, success_bonus, fail_bonus = 0.32, -0.2, -0.8
+        base += (coach_rating - 50) / 200
+        base = max(0.15, min(0.90, base))
+        success = self.rng.random() < base
+        bonus = success_bonus if success else fail_bonus
+        morale_delta = 1 if success else (-1 if style in ("arenga", "exigir") else 0)
+        team.morale = max(1, min(20, team.morale + morale_delta))
+        for p in lineup:
+            p.morale = max(1, min(20, p.morale + morale_delta))
+        self.talk_bonus[side] = round(bonus, 2)
+        self.talk_done[side] = True
+        labels = {"arenga": "arenga", "calma": "calma", "exigir": "exigencia", "confiar": "confianza"}
+        outcome = "El equipo responde" if success else "El mensaje no cala"
+        message = (f"{coach_label} da una charla de {labels.get(style, style)}. "
+                   f"{outcome}. Bonus {bonus:+.1f}.")
+        self._add_event("talk", side, None, message)
+        return {"style": style, "coach": coach_label, "success": success,
+                "bonus": round(bonus, 2), "morale_delta": morale_delta, "message": message}
+
+    def _ai_adjust(self, side: int):
+        if side not in self.ai_sides:
+            return
+        team = self._team(side)
+        opp = self._team(1 - side)
+        q = self.quarter
+        diff = self.score[side] - self.score[1 - side]
+        avg_fatigue = _mean([p.fatigue for p in self._lineup(side)])
+        chance = 0.50 + (team.manager_rating - 50) / 250
+        if self.rng.random() > chance:
+            return
+        before = (team.tactics.mentality, team.tactics.press, team.tactics.block,
+                  team.tactics.tempo, team.tactics.passing)
+        if diff < 0 and q >= 2:
+            if q >= 3:
+                team.tactics.mentality = "muy_ofensiva"
+                team.tactics.tempo = "rapido"
+                team.tactics.press = "alta"
+                team.tactics.block = "alto"
+            else:
+                team.tactics.mentality = "ofensiva"
+                team.tactics.tempo = "rapido"
+                team.tactics.press = "alta"
+        elif diff > 0 and q >= 3:
+            team.tactics.mentality = "defensiva"
+            team.tactics.tempo = "lento"
+            team.tactics.press = "media"
+            team.tactics.block = "bajo"
+        elif diff == 0 and q >= 3:
+            team.tactics.mentality = "ofensiva"
+            team.tactics.tempo = "rapido"
+        # lectura del rival
+        if opp.tactics.press in ("alta", "muy_alta"):
+            team.tactics.passing = "directo"
+        if opp.tactics.block == "bajo":
+            team.tactics.tempo = "rapido"
+        elif opp.tactics.block == "alto":
+            team.tactics.passing = "corto"
+        # fatiga: no se puede presionar eternamente
+        if avg_fatigue > 65:
+            if team.tactics.press in ("alta", "muy_alta"):
+                team.tactics.press = "media"
+            if team.tactics.tempo == "rapido":
+                team.tactics.tempo = "normal"
+        after = (team.tactics.mentality, team.tactics.press, team.tactics.block,
+                 team.tactics.tempo, team.tactics.passing)
+        if after != before:
+            self._add_event("tactic", side, None,
+                            f"{team.name} ajusta su planteamiento para el {q + 1}º cuarto: "
+                            f"mentalidad {team.tactics.mentality.replace('_', ' ')}, "
+                            f"presión {team.tactics.press.replace('_', ' ')}, "
+                            f"tempo {team.tactics.tempo}.")
+        if avg_fatigue > 60 and self._subs[side] < 5 and side in self.auto_sub_sides:
+            self._substitute(side)
+
     def advance_moment(self) -> list[dict[str, Any]]:
         """Avanza un momento de juego (~1,1 minutos) y devuelve los eventos nuevos."""
         if self.finished:
@@ -596,6 +743,15 @@ class MatchEngine:
         for p in self.home_lineup + self.away_lineup:
             p.fatigue = max(0.0, p.fatigue - 1.5)
         if self.quarter < 4:
+            for side in sorted(self.ai_sides):
+                self._ai_adjust(side)
+            if self.quarter == 2:
+                for side in sorted(self.auto_talk_sides):
+                    if not self.talk_done[side]:
+                        self.apply_team_talk(side, "auto", coach_label="El cuerpo técnico")
+            if self.quarter == 3:
+                self.talk_bonus[0] *= 0.5
+                self.talk_bonus[1] *= 0.5
             self._add_event("info", None, None,
                             f"Final del {self.quarter}º cuarto: {self.home.name} {self.score[0]}-{self.score[1]} {self.away.name}.",
                             minute=int(self.quarter * QUARTER_MINUTES))

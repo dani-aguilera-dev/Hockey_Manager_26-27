@@ -46,6 +46,46 @@ En el modo directo, el resto de la jornada se simula primero y tu partido queda 
 - Los cambios tácticos se aplican desde el siguiente momento.
 - La **lectura táctica** premia elegir la respuesta correcta al planteamiento rival.
 
+### Charla de vestuario
+
+Al descanso (inicio del tercer cuarto) puedes dar una charla:
+
+| Opción | Efecto principal |
+|---|---|
+| **Arenga** | Sube moral e intensidad; arriesga si el equipo va ganando cómodo o está muy bajo de moral |
+| **Calma** | Ordena y protege el resultado; útil con fatiga alta |
+| **Exigir** | Busca una reacción fuerte; puede generar rechazo si la moral es baja |
+| **Confiar** | Da confianza cuando el equipo compite bien; mala idea si va perdiendo |
+| **Delegar** | El segundo entrenador elige la charla según el contexto |
+
+La charla se resuelve con moral, fatiga, competitividad, liderazgo, marcador y calidad del mánager o del segundo entrenador. El efecto se aplica al ataque y la defensa del siguiente cuarto y luego se reduce a la mitad para el último cuarto.
+
+**Delegar no es una opción de castigo:** el segundo entrenador usa su propio rating y suele tomar una decisión razonable. Es la opción recomendada para quien no quiera gestionar cada detalle.
+
+### IA reactiva
+
+El entrenador rival ya no mantiene la misma táctica todo el partido. En los descansos de cuarto puede:
+
+- Aumentar la mentalidad ofensiva y el tempo si va perdiendo.
+- Cerrarse y bajar el ritmo si va ganando en el último cuarto.
+- Arriesgar si hay empate cerca del final.
+- Cambiar el pase a directo contra presión alta.
+- Aprovechar un bloque bajo rival con tempo rápido.
+- Reducir presión si la fatiga es alta.
+- Hacer cambios si el equipo está fundido.
+
+Los ajustes aparecen en el comentario como `[Ajuste]`. La calidad del mánager rival influye en la probabilidad de reaccionar bien.
+
+### Menos opciones, más decisiones
+
+El diseño evita menús infinitos:
+
+- La charla es una sola vez, al descanso.
+- Hay cuatro estilos claros y una opción de delegar.
+- El modo rápido delega automáticamente la charla en el segundo entrenador.
+- La IA rival se gestiona sola.
+- El entrenamiento semanal tendrá un botón de **plan automático** para quien no quiera microgestionar cada sesión.
+
 ---
 
 ## 2. Gestión: la recompensa interna
@@ -151,21 +191,25 @@ payload = finish_live_round(state, ctx)
 - equivalencia entre simulación completa y simulación por cuartos;
 - cambio manual;
 - jornada en directo;
-- recompensa de gestión.
+- recompensa de gestión;
+- charla de vestuario y delegación;
+- IA reactiva.
 
 ```bash
 cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado actual: **18 tests superados**.
+Resultado actual: **21 tests superados**.
 
 ---
 
 ## 7. Limitaciones
 
 - No se puede guardar la partida en mitad del partido.
-- La IA no cambia de táctica en directo; sí rota y hace cambios automáticos.
+- La IA cambia mentalidad, presión, bloque, tempo y pase; no cambia de formación en directo.
 - Cambiar de formación no recoloca automáticamente a los jugadores: cambia el encaje y la lectura táctica.
 - El motor es explicable y lúdico, no una simulación física.
 - El bonus de gestión es deliberadamente moderado: ayuda, pero no sustituye la calidad individual.
+- La charla de vestuario se da una vez por partido.
+- El entrenamiento semanal todavía no está implementado; queda diseñado con opción automática para la siguiente fase.

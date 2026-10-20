@@ -194,6 +194,7 @@ class GameUI:
         print(f"Objetivo: {board.get('expectation', team.board_expectation)}")
         print(f"Presión: {board.get('pressure', '—')} · Paciencia: {board.get('patience', '—')}/5")
         print(f"Presupuesto de fichajes: {money(fin.get('transfer_budget', team.budget))} · Masa salarial: {money(fin.get('wage_budget', team.wage_budget))}")
+        print(f"Segundo entrenador: {team.assistant_rating}/100 · Mánager: {team.manager_rating}/100")
         section("LOGÍSTICA")
         print(f"Aeropuerto: {logi.get('airport', '—')} · Tren: {logi.get('train', '—')} · Modo habitual: {logi.get('preferred_mode', '—')}")
         print(wrap(logi.get("notes", ""), indent="  "))
@@ -614,7 +615,11 @@ class GameUI:
         print("Controles: Enter = avanzar · M = minuto a minuto · E = estadísticas · J = jugadores")
         print("           T = táctica · S = cambio · A = simular resto")
         mode = "quarter"
+        talked = False
         while not engine.finished:
+            if engine.quarter == 3 and not talked:
+                self.halftime_talk(ctx)
+                talked = True
             if engine.moment_in_quarter == 0:
                 self.live_score_line(engine)
                 op = ask("\n[Enter] cuarto completo · [M] minuto a minuto · [E] stats · [J] jugadores · [T] táctica · [S] cambio · [A] resto: ").lower()
@@ -683,6 +688,31 @@ class GameUI:
         self.print_match_report(payload)
         pause()
 
+    def halftime_talk(self, ctx):
+        engine = ctx.engine
+        side = ctx.user_side
+        team = self.state.user_team
+        header("CHARLA DE VESTUARIO · DESCANSO")
+        home = self.state.teams[engine.home.id]
+        away = self.state.teams[engine.away.id]
+        print(f"{home.name} {engine.score[0]}-{engine.score[1]} {away.name}")
+        diff = engine.score[side] - engine.score[1 - side]
+        situation = "vais por delante" if diff > 0 else ("vais empatando" if diff == 0 else "vais por detrás")
+        avg_fat = sum(p.fatigue for p in engine._lineup(side)) / max(1, len(engine._lineup(side)))
+        print(f"En el vestuario: {situation}. Moral {team.morale}/20 · Fatiga media {avg_fat:.0f}% · Segundo entrenador {team.assistant_rating}/100")
+        print("\n  1. Arenga: motivar y subir la intensidad")
+        print("  2. Calma: tranquilizar y ordenar")
+        print("  3. Exigir: apretar y pedir más")
+        print("  4. Confiar: dar confianza al grupo")
+        print("  5. Delegar en el segundo entrenador")
+        raw = ask("\n  > ").lower()
+        styles = {"1": "arenga", "2": "calma", "3": "exigir", "4": "confiar", "5": "delegar"}
+        style = styles.get(raw, "delegar")
+        result = engine.apply_team_talk(side, style)
+        print(f"\n  {result['message']}")
+        print(f"  Efecto para el próximo cuarto: {result['bonus']:+.1f} · Moral {team.morale}/20")
+        pause()
+
     def live_score_line(self, engine):
         home = self.state.teams[engine.home.id]
         away = self.state.teams[engine.away.id]
@@ -693,8 +723,8 @@ class GameUI:
             print(f"\n  {home.name} {engine.score[0]}-{engine.score[1]} {away.name} · {q}º cuarto · {engine.minute}'")
 
     def live_events(self, events: list[dict]):
-        key_types = {"goal", "pc", "stroke", "save", "card", "injury", "substitution", "chance", "circle_entry"}
-        prefix = {"goal": ">>> ", "save": "  ! ", "card": "  # ", "injury": "  + ", "substitution": "  -> ", "pc": "  PC ", "stroke": "  ST "}
+        key_types = {"goal", "pc", "stroke", "save", "card", "injury", "substitution", "chance", "circle_entry", "talk", "tactic"}
+        prefix = {"goal": ">>> ", "save": "  ! ", "card": "  # ", "injury": "  + ", "substitution": "  -> ", "pc": "  PC ", "stroke": "  ST ", "talk": "  [Charla] ", "tactic": "  [Ajuste] "}
         shown = False
         for e in events:
             if e.get("type") not in key_types:
@@ -836,14 +866,14 @@ class GameUI:
         print(f"{fmt_date(p['date'])} · Jornada {p['round']} · Asistencia: {p.get('attendance', 0)}")
         print(f"Perspectiva: {p['result']} ({p['user_goals']}-{p['user_against']})")
         section("COMENTARIO")
-        key_types = {"goal", "pc", "stroke", "save", "card", "injury", "substitution", "chance", "circle_entry"}
+        key_types = {"goal", "pc", "stroke", "save", "card", "injury", "substitution", "chance", "circle_entry", "talk", "tactic"}
         events = [e for e in p.get("events", []) if e.get("type") in key_types]
         current_q = None
         for e in events:
             if e.get("quarter") != current_q:
                 current_q = e.get("quarter")
                 print(f"\n  --- Cuarto {current_q} ---")
-            prefix = {"goal": ">>> ", "save": "  ! ", "card": "  # ", "injury": "  + ", "substitution": "  -> ", "pc": "  PC ", "stroke": "  ST "}.get(e.get("type"), "  · ")
+            prefix = {"goal": ">>> ", "save": "  ! ", "card": "  # ", "injury": "  + ", "substitution": "  -> ", "pc": "  PC ", "stroke": "  ST ", "talk": "  [Charla] ", "tactic": "  [Ajuste] "}.get(e.get("type"), "  · ")
             print(f"  {e.get('minute', 0):02d}' {prefix}{e.get('text', '')}")
         if not events:
             print("  Partido sin incidencias destacadas.")

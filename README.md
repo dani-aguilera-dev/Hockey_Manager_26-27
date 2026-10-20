@@ -47,7 +47,7 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. La **Fase 1** ya es jugable: una temporada completa de DHA con partidos en directo, charla de vestuario, IA reactiva, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
 
 - [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.
