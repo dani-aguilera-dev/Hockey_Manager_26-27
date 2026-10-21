@@ -80,6 +80,8 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
     clubs_by_id, cities_by_name = load_clubs()
     staff_path = DATA / "staff_dha.json"
     staff_by_club = json.load(open(staff_path, encoding="utf-8")) if staff_path.exists() else {}
+    isquad_path = DATA / "staff_isquad.json"
+    isquad_staff = json.load(open(isquad_path, encoding="utf-8")) if isquad_path.exists() else {}
     rows = list(csv.DictReader(open(TOOLS / "player_attributes_v2.csv", encoding="utf-8-sig")))
     by_team: dict[str, list[dict]] = {}
     for r in rows:
@@ -157,9 +159,11 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
         assistant_rating += 5 if fac.get("video") else 0
         assistant_rating += 3 if fac.get("medical") else 0
         assistant_rating = max(45, min(85, assistant_rating))
-        staff_rows = staff_by_club.get(club["id"], {}).get("staff", [])
+        curated = staff_by_club.get(club["id"], {})
+        scraped_rows = isquad_staff.get(club["id"], {}).get("staff", [])
+        staff_rows = scraped_rows or curated.get("staff", [])
         staff = [StaffMember(**{k: v for k, v in row.items() if k in StaffMember.__dataclass_fields__}) for row in staff_rows]
-        board = [BoardMember(**{k: v for k, v in row.items() if k in BoardMember.__dataclass_fields__}) for row in staff_by_club.get(club["id"], {}).get("board", [])]
+        board = [BoardMember(**{k: v for k, v in row.items() if k in BoardMember.__dataclass_fields__}) for row in curated.get("board", [])]
         if staff:
             assistant = next((m for m in staff if m.role == "assistant"), None)
             if assistant:

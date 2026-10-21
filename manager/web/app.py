@@ -537,6 +537,9 @@ def team_detail(team_id):
     played = [f for f in fixtures if f.played][-5:]
     upcoming = [f for f in fixtures if not f.played][:5]
     probable_line, probable_bench = selected.auto_lineup()
+    is_user_team = selected.id == state.club_id
+    team_staff = [member for member in selected.staff if member.role != "head_coach"]
+    team_coach = next((member for member in selected.staff if member.role == "head_coach"), None)
     ctx = state_context(state)
     ctx.update({
         "selected_team": selected, "club": club, "team_position": position, "team_group": team_group,
@@ -545,6 +548,8 @@ def team_detail(team_id):
         "probable_bench": probable_bench, "probable_rows": lineup_rows(selected, probable_line),
         "probable_formation": selected.tactics.formation,
         "team_players": sorted(selected.players, key=lambda p: (p.position_group, -p.overall)),
+        "team_staff": team_staff, "team_coach": team_coach, "is_user_team": is_user_team,
+        "staff_labels": STAFF_LABELS,
     })
     return render_template("team.html", **ctx)
 
@@ -749,7 +754,8 @@ def staff():
     state = get_state()
     ctx = state_context(state)
     ctx["staff_labels"] = STAFF_LABELS
-    ctx["free_roles"] = [r for r in STAFF_LABELS if not any(m.role == r for m in state.user_team.staff)]
+    hireable = ("assistant", "fitness_coach", "gk_coach", "performance_analyst", "scout", "physio", "technical_director")
+    ctx["free_roles"] = [r for r in hireable if not any(m.role == r for m in state.user_team.staff)]
     return render_template("staff.html", **ctx)
 
 

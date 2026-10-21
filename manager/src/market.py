@@ -8,6 +8,7 @@ from typing import Any
 from .models import GameState, PlayerState, StaffMember, TeamState
 
 STAFF_LABELS = {
+    "head_coach": "Entrenador",
     "assistant": "Segundo entrenador",
     "fitness_coach": "Preparador físico",
     "gk_coach": "Entrenador de porteros",
@@ -15,11 +16,17 @@ STAFF_LABELS = {
     "scout": "Ojeador",
     "physio": "Fisioterapeuta",
     "technical_director": "Director deportivo",
+    "doctor": "Médico",
+    "psychologist": "Psicólogo",
+    "delegate": "Delegado",
+    "additional": "Staff adicional",
 }
 STAFF_BASE_SALARY = {
+    "head_coach": 60000,
     "assistant": 42000, "fitness_coach": 30000, "gk_coach": 24000,
     "performance_analyst": 26000, "scout": 20000, "physio": 28000,
     "technical_director": 45000,
+    "doctor": 26000, "psychologist": 24000, "delegate": 12000, "additional": 15000,
 }
 STAFF_NAMES = [
     "Jordi Pons", "Marc Ferrer", "Laia Soler", "Pere Roca", "Núria Camps",

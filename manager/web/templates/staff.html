@@ -10,7 +10,8 @@
   <div class="card">
     <h3>Staff técnico</h3>
     <div class="staff-list">
-    {% for member in team.staff %}
+    <div class="staff-row"><div class="board-icon">T</div><div class="pc-body"><div class="pc-name">Tú</div><div class="pc-tags"><span class="badge">Entrenador</span><span class="arch">Mánager del club</span></div></div></div>
+    {% for member in team.staff %}{% if member.role != 'head_coach' %}
       <div class="staff-row">
         {{ m.avatar(member, 'avatar-small') }}
         <div class="pc-body">
@@ -20,7 +21,7 @@
         <div class="rating-badge"><b>{{ member.rating }}</b><span>/100</span></div>
         <form method="post" action="{{ url_for('staff_fire', role=member.role) }}"><button class="btn danger small">Despedir</button></form>
       </div>
-    {% endfor %}
+    {% endif %}{% endfor %}
     </div>
     <h3 style="margin-top:18px">Contratar</h3>
     <div class="actions">{% for r in free_roles %}<a class="btn small" href="{{ url_for('staff_hire', role=r) }}">{{ staff_labels[r] }}</a>{% else %}<p class="muted small">No hay candidatos disponibles ahora mismo.</p>{% endfor %}</div>

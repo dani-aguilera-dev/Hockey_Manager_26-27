@@ -62,7 +62,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **59 tests superados**.
+Resultado esperado: **61 tests superados**.
 
 ---
 

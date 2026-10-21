@@ -8,10 +8,9 @@ def test_dha_staff_and_board_loaded():
     dha = dha_teams(teams)
     assert len(dha) == 12
     for team in dha:
-        assert len(team.staff) == 7, team.name
+        assert team.staff, team.name
+        assert any(m.role == "head_coach" for m in team.staff), team.name
         assert len(team.board) == 6, team.name
-        assistant = next(m for m in team.staff if m.role == "assistant")
-        assert team.assistant_rating == assistant.rating
         assert team.staff_rating("fitness_coach") > 0
         assert team.staff_wage_bill() > 0
         assert team.transfer_budget > 0

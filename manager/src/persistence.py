@@ -11,7 +11,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from .models import GameState
+from .models import GameState, StaffMember
 
 DEFAULT_DB = Path(__file__).resolve().parents[1] / "saves" / "manager.db"
 
@@ -109,10 +109,39 @@ def _backfill_media(state: GameState) -> None:
             player.photo, player.photo_remote = media
 
 
+def _backfill_staff(state: GameState) -> None:
+    """Añade el cuerpo técnico de iSquad a partidas antiguas."""
+    if all(team.staff and any(m.role == "head_coach" for m in team.staff)
+           for team in state.teams.values()):
+        return
+    path = Path(__file__).resolve().parents[1] / "data" / "staff_isquad.json"
+    if not path.exists():
+        return
+    try:
+        import json
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    for team in state.teams.values():
+        scraped = data.get(team.id, {}).get("staff", [])
+        if not scraped:
+            continue
+        if not any(m.role == "head_coach" for m in team.staff):
+            head = next((row for row in scraped if row.get("role") == "head_coach"), None)
+            if head:
+                team.staff.append(StaffMember(**{k: v for k, v in head.items()
+                                                 if k in StaffMember.__dataclass_fields__}))
+        if not team.staff:
+            team.staff = [StaffMember(**{k: v for k, v in row.items()
+                                         if k in StaffMember.__dataclass_fields__})
+                          for row in scraped]
+
+
 def backfill_state(state: GameState) -> GameState:
     """Compatibilidad con partidas guardadas antes de comunidad/fotos."""
     _backfill_communities(state)
     _backfill_media(state)
+    _backfill_staff(state)
     return state
 
 
@@ -130,6 +159,7 @@ def load_game(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> GameState
     state = GameState.from_dict(json.loads(row[0]))
     _backfill_communities(state)
     _backfill_media(state)
+    _backfill_staff(state)
     return state
 
 
@@ -157,4 +187,5 @@ def import_json(path: Path | str) -> GameState:
     state = GameState.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
     _backfill_communities(state)
     _backfill_media(state)
+    _backfill_staff(state)
     return state

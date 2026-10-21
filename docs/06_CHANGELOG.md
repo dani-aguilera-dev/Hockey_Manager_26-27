@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-21 — Cuerpo técnico real de iSquad
+
+### Añadido
+
+- Extracción automática del staff visible en las fichas de equipo de iSquad para los 28 clubes activos y la 1ª Andaluza.
+- Mínimo un **entrenador** por equipo, incluidos todos los clubes de DHB que antes estaban vacíos.
+- Roles adicionales cuando aparecen en la web: preparador físico, fisioterapeuta, psicólogo, delegado, médico, analista, entrenador de porteros y staff adicional.
+- **Perfil de equipo** con cuerpo técnico completo, entrenador y fuente.
+- En el club que gestiona el usuario, el entrenador externo se oculta y aparece **Tú** como entrenador.
+- Compatibilidad con partidas antiguas: se rellena el entrenador o el staff que falte.
+- Script `tools/fetch_isquad_staff.py` y documento `manager/docs/19_STAFF_Y_CUERPO_TECNICO.md`.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 61 tests superados.
+
+---
+
 ## 2026-10-21 — Fotos reales también en partidas antiguas
 
 ### Corregido

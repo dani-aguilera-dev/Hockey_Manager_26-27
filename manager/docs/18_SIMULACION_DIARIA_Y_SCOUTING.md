@@ -126,7 +126,7 @@ Se verifica:
 - registro del histórico de temporada;
 - rutas de equipo, vestuario, chat y calendario.
 
-Resultado actual: **59 tests superados**.
+Resultado actual: **61 tests superados**.
 
 ## 10. Limitaciones
 

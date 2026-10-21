@@ -113,4 +113,4 @@ python3 -m pytest src/tests -q
 
 Incluye pruebas de rutas web, nueva partida, fotos, escudos, noticias, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **59 tests superados**.
+Resultado actual: **61 tests superados**.

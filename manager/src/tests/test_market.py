@@ -50,7 +50,8 @@ def test_incoming_offers_shape():
 def test_staff_hire_and_fire():
     state = new_game("cd-terrassa", "Test", seed=504)
     team = state.user_team
-    fired = fire_staff(state, "scout")
+    role = next(m.role for m in team.staff if m.role not in ("head_coach", "delegate", "additional"))
+    fired = fire_staff(state, role)
     assert fired["ok"]
     candidates = staff_candidates(team, "scout", __import__("random").Random(1))
     hired = hire_staff(state, candidates[0])

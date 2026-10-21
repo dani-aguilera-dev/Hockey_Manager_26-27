@@ -44,6 +44,20 @@
 </div>
 
 <div class="card" style="margin-top:14px">
+  <h3>Cuerpo técnico</h3>
+  <div class="staff-list">
+    {% if is_user_team %}
+    <div class="staff-row"><div class="board-icon">T</div><div class="pc-body"><div class="pc-name">Tú</div><div class="pc-tags"><span class="badge">Entrenador</span><span class="arch">Mánager del club</span></div></div></div>
+    {% elif team_coach %}
+    <div class="staff-row"><div class="board-icon">{{ team_coach.name[:1] }}</div><div class="pc-body"><div class="pc-name">{{ team_coach.name }}</div><div class="pc-tags"><span class="badge">Entrenador</span><span class="arch">{{ team_coach.source }} · {{ team_coach.confidence }}</span></div></div><div class="rating-badge"><b>{{ team_coach.rating }}</b><span>/100</span></div></div>
+    {% endif %}
+    {% for member in team_staff %}
+    <div class="staff-row"><div class="board-icon">{{ member.name[:1] }}</div><div class="pc-body"><div class="pc-name">{{ member.name }}</div><div class="pc-tags"><span class="badge">{{ staff_labels.get(member.role, member.role) }}</span><span class="arch">{{ member.source }} · {{ member.confidence }}</span></div></div><div class="rating-badge"><b>{{ member.rating }}</b><span>/100</span></div></div>
+    {% else %}{% if not team_coach and not is_user_team %}<p class="muted">Sin cuerpo técnico registrado.</p>{% endif %}{% endfor %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
   <div class="row" style="justify-content:space-between"><h3 style="margin:0">Plantilla</h3><span class="badge">{{ team_players|length }} jugadores</span></div>
   <table><thead><tr><th></th><th>Jugador</th><th>Pos</th><th class="num">Edad</th><th class="num">OVR</th><th class="num">PJ</th><th class="num">G</th><th class="num">A</th><th class="num">Rating</th></tr></thead><tbody>
   {% for p in team_players %}<tr>

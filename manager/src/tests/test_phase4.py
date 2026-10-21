@@ -55,6 +55,15 @@ def test_youth_names_follow_autonomous_community():
     assert CATEGORY_AGES["Sub-16"] == (14, 15)
 
 
+def test_every_team_has_a_coach_from_isquad():
+    from src.data_loader import load_teams
+    teams, _, _ = load_teams()
+    active = [t for t in teams.values() if t.league in ("DHA", "DHB")]
+    assert active
+    for team in active:
+        assert any(member.role == "head_coach" for member in team.staff), team.name
+
+
 def test_press_conference():
     state = new_game("cd-terrassa", "Test", seed=603)
     qs = press_questions(state)

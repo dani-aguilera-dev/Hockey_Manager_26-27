@@ -44,6 +44,18 @@ def test_old_save_backfills_player_photos():
         assert loaded.user_team.players[0].photo
 
 
+def test_old_save_backfills_staff():
+    state = new_game("pozuelo", "Test", seed=91)
+    for team in state.teams.values():
+        team.staff = []
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "staff.db"
+        save_game(state, "old-staff", db)
+        loaded = load_game("old-staff", db)
+        assert all(any(member.role == "head_coach" for member in team.staff)
+                   for team in loaded.teams.values())
+
+
 def test_training_state_roundtrip():
     state = new_game("cd-terrassa", "Test", seed=88)
     ensure_week_training(state)
