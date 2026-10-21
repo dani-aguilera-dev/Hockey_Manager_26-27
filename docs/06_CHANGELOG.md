@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-21 — Test de estrés de 10 temporadas con mercado
+
+### Añadido
+
+- Simulación de 10 temporadas completas con:
+  - mercado de verano e invierno;
+  - agentes libres;
+  - Copa;
+  - EHL;
+  - DHB de dos fases;
+  - cantera y multi-temporada.
+- Documento `manager/docs/14_TEST_ESTRESS_10_TEMPORADAS.md`.
+- Registro de 40 movimientos de mercado y de los fichajes más caros.
+
+### Resultado
+
+- Sin errores de ejecución.
+- 12 equipos DHA y 16 DHB estables.
+- Ningún equipo por debajo de 18 jugadores.
+- 10 temporadas en 104,4 segundos.
+
+### Observaciones
+
+- Algunas estrellas se mueven por debajo de su valor.
+- Hay que ajustar valoración de jugadores, salarios y presupuesto de fichajes.
+
+---
+
 ## 2026-10-21 — Copa a ida y vuelta y EHL
 
 ### Añadido

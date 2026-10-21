@@ -120,6 +120,7 @@ manager/
 12. [`docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`](docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md) — mercado, contratos, staff y multi-temporada.
 13. [`docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
 14. [`docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`](docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md) — DHB de dos fases y agentes libres.
+15. [`docs/14_TEST_ESTRESS_10_TEMPORADAS.md`](docs/14_TEST_ESTRESS_10_TEMPORADAS.md) — test de 10 temporadas con mercado.
 
 ## Datos
 
