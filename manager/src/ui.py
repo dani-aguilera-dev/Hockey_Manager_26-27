@@ -742,15 +742,15 @@ class GameUI:
         t = self.state.user_team
         while True:
             header(f"CANTERA · {t.name.upper()}")
-            print(f"Academia: {t.academy_rating}/100 · Jugadores en cantera: {len(t.youth)}")
+            print(f"Academia: {t.academy_rating}/100 · {len(t.youth)} juveniles · {t.community}")
             if not t.youth:
                 print("\nNo hay jugadores en la cantera. Llegarán nuevas generaciones al final de temporada.")
                 pause()
                 return
-            print(f"{'#':>3}  {'Jugador':<28} {'Pos':<9} {'Edad':>4} {'OVR':>5} {'Potencial':>9} {'Salario':>9} {'Contrato':<12}")
+            print(f"{'#':>3}  {'Jugador':<28} {'Cat':<7} {'Pos':<9} {'Edad':>4} {'OVR':>5} {'Potencial':>9} {'Contrato':<12}")
             line()
             for i, p in enumerate(t.youth, 1):
-                print(f"{i:>3}  {short(p.name,28):<28} {p.subposition:<9} {p.age:>4} {p.overall:>5.1f} {p.potential:>9.1f} {money(p.salary):>9} {p.contract_until:<12}")
+                print(f"{i:>3}  {short(p.name,28):<28} {p.youth_category:<7} {p.subposition:<9} {p.age:>4} {p.overall:>5.1f} {p.potential:>9.1f} {p.contract_until:<12}")
             print("\n  [P] Promover al primer equipo   [R] Liberar   [V] Volver")
             op = ask("  > ").lower()
             if op in ("v", ""):

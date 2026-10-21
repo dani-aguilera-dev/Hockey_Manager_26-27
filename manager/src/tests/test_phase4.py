@@ -1,6 +1,7 @@
 from src.season import new_game, play_round, simulate_cup_round, simulate_cup_remaining, season_summary, _process_age_and_retirements
 from src.cup import new_cup, cup_round_fixtures, cup_status_text
-from src.youth import promote_youth, develop_youth, intake
+from src.youth import (CATEGORY_AGES, YOUTH_CATEGORIES, category_for_age,
+                       community_pool, promote_youth, develop_youth, intake)
 from src.press import press_questions, answer_press, mark_press_done
 from src.ehl import create_ehl, simulate_ehl
 import random
@@ -24,7 +25,8 @@ def test_cup_bracket_and_rounds():
 def test_youth_promotion_and_development():
     state = new_game("cd-terrassa", "Test", seed=602)
     team = state.user_team
-    assert len(team.youth) >= 3
+    assert len(team.youth) >= 6
+    assert {p.youth_category for p in team.youth} == set(YOUTH_CATEGORIES)
     before_players = len(team.players)
     before_youth = len(team.youth)
     ok, _ = promote_youth(team, team.youth[0].id)
@@ -34,6 +36,23 @@ def test_youth_promotion_and_development():
     develop_youth(team, random.Random(1), 2027)
     intake(team, random.Random(2), 2027)
     assert len(team.youth) >= 3
+
+
+def test_youth_names_follow_autonomous_community():
+    state = new_game("aticos-san-fernando", "Test", seed=607)
+    team = state.user_team
+    assert team.community == "Andalucía"
+    pool = community_pool("Andalucía")
+    assert "Pau" not in pool["names"]
+    for player in team.youth:
+        parts = player.name.split()
+        assert parts[0] in pool["names"]
+        assert all(surname in pool["surnames"] for surname in parts[1:])
+    assert category_for_age(14) == "Sub-16"
+    assert category_for_age(16) == "Sub-18"
+    assert category_for_age(18) == "Sub-21"
+    assert category_for_age(21) == "Senior"
+    assert CATEGORY_AGES["Sub-16"] == (14, 15)
 
 
 def test_press_conference():

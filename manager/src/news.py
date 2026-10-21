@@ -87,7 +87,7 @@ def news_feed(state: GameState, limit: int = 8) -> list[dict[str, Any]]:
         items.append({
             "category": "Cantera",
             "headline": f"{best.name}, la perla que empuja desde abajo",
-            "body": f"{best.subposition} de {best.age} años · overall {best.overall:.1f} · potencial {best.potential:.1f}. La academia está en {user.academy_rating}/100.",
+            "body": f"{best.youth_category} · {best.subposition} de {best.age} años · overall {best.overall:.1f} · potencial {best.potential:.1f}. La academia está en {user.academy_rating}/100.",
             "date": state.date,
         })
     if fx:

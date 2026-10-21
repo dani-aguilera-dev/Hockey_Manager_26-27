@@ -43,6 +43,7 @@
 - [`../manager/docs/06_MODELO_DATOS.md`](../manager/docs/06_MODELO_DATOS.md)
 - [`../manager/docs/15_WEB_ALPHA.md`](../manager/docs/15_WEB_ALPHA.md)
 - [`../manager/docs/16_DISENO_UI.md`](../manager/docs/16_DISENO_UI.md)
+- [`../manager/docs/17_CANTERA_Y_CATEGORIAS.md`](../manager/docs/17_CANTERA_Y_CATEGORIAS.md)
 
 ## Informes complementarios
 

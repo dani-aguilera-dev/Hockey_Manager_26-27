@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-21 — Escudos oficiales y cantera Sub-16/Sub-18/Sub-21
+
+### Añadido
+
+- **29/29 escudos oficiales de iSquad** para los clubes activos y la 1ª Andaluza:
+  - descarga por `id_equipo` desde la cabecera de cada equipo;
+  - recorte de fondo blanco a transparente;
+  - PNG de 320 px con prioridad sobre el SVG estilizado de respaldo;
+  - script reproducible `tools/fetch_isquad_crests.py`.
+- **Cantera por categorías**: Sub-16 (14-15), Sub-18 (16-17) y Sub-21 (18-20).
+- **Nombres y apellidos por comunidad autónoma**: pools para las 17 comunidades y respaldo común.
+- Seis canteranos iniciales por club, dos por categoría, y tres incorporaciones anuales de 14-16 años.
+- Crecimiento diferenciado por categoría y salida de la cantera a los 21 años.
+- Vista de cantera agrupada por categoría con edades, potencial y acciones.
+- Documento `manager/docs/17_CANTERA_Y_CATEGORIAS.md`.
+
+### Corregido
+
+- El nombre de un canterano andaluz ya no sale de un pool catalán: se selecciona según `TeamState.community`.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 52 tests superados.
+
+---
+
 ## 2026-10-21 — Interfaz inmersiva, escudos y noticias
 
 ### Añadido

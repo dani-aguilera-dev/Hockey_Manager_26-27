@@ -34,7 +34,7 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - Nueva partida con club DHA o DHB.
 - Carga y guardado de partidas en SQLite.
 - Dashboard con ticker de última hora, próximo partido, clasificación, caja, entrenamiento, Copa e inbox.
-- **Escudos de club** servidos desde `web/static/crests/` y sustituibles por PNG oficiales.
+- **Escudos oficiales de club** descargados de iSquad en `web/static/crests/` (29/29), con SVG estilizado como respaldo.
 - **Noticias generadas** desde el estado: previa, resultado, liga, mercado, enfermería, cantera, scouting, afición, junta y Copa.
 - **Fotos de los jugadores** servidas desde `jugadores/` con fallback a avatar.
 - Plantilla en fichas por posición, con foto, posición y arquetipo destacados.
@@ -44,7 +44,7 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - Entrenamiento semanal: automático, recuperación o plan editado.
 - Mercado: búsqueda, agentes libres, ofertas de traspaso, ofertas recibidas y renovaciones.
 - Staff: contratar y despedir; junta directiva.
-- Cantera: promover y liberar juveniles.
+- Cantera: categorías Sub-16, Sub-18 y Sub-21; promover y liberar juveniles.
 - Prensa.
 - Copa del Rey de 8 equipos DHA.
 - Clasificación y calendario.
@@ -104,4 +104,4 @@ python3 -m pytest src/tests -q
 
 Incluye pruebas de rutas web, nueva partida, fotos, escudos, noticias, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **51 tests superados**.
+Resultado actual: **52 tests superados**.

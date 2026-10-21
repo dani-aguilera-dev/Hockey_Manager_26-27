@@ -72,8 +72,9 @@ def test_web_crests_and_news(client):
     _new(client, seed="15")
     r = client.get("/new")
     assert r.status_code == 200
-    assert b"crests/cd-terrassa.svg" in r.data
-    assert client.get("/static/crests/cd-terrassa.svg").status_code == 200
+    assert b"crests/cd-terrassa.png" in r.data
+    assert client.get("/static/crests/cd-terrassa.png").status_code == 200
+    assert client.get("/static/crests/cd-terrassa.png").mimetype == "image/png"
     r = client.get("/news")
     assert r.status_code == 200
     assert "Actualidad".encode() in r.data

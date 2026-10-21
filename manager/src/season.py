@@ -1036,8 +1036,11 @@ def advance_to_next_season(state: GameState) -> None:
         develop_youth(team, rng, new_year)
         intake(team, rng, new_year)
         while len(team.players) < 18:
-            if team.youth:
-                p = team.youth.pop(0)
+            # Solo se sube al primer equipo a canteranos en edad Sub-21 o mayor.
+            eligible = [p for p in team.youth if p.age >= 18]
+            if eligible:
+                p = eligible[0]
+                team.youth.remove(p)
                 p.perfil = "Jugador"
                 p.team_name = team.name
                 team.players.append(p)

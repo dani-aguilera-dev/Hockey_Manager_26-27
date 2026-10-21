@@ -7,8 +7,8 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 - **Diseño:** completo en `docs/`.
 - **Datos:** 29 clubes, 16 ciudades, 976 perfiles, 37 atributos.
 - **Motor:** DHA y DHB jugables, partidos en directo, mercado, staff, entrenamiento, cantera, Copa, EHL, multi-temporada y guardado/carga.
-- **Web alpha:** Flask + Jinja con fotos de los 976 jugadores, escudos de club, noticias inmersivas y diseño responsive.
-- **Tests:** 51 superados.
+- **Web alpha:** Flask + Jinja con fotos de los 976 jugadores, escudos oficiales de iSquad, noticias inmersivas y diseño responsive.
+- **Tests:** 52 superados.
 
 ## Inicio rápido
 
@@ -62,7 +62,7 @@ El juego incluye:
 - **staff y finanzas**: siete roles de staff, junta directiva, salarios, patrocinio, taquilla, viajes y caja;
 - **mercado y contratos**: ventanas de verano/invierno, ofertas, renovaciones, contratación de staff y mercado IA;
 - **multi-temporada**: ascensos, descensos, DHA/DHB, contratos, canteranos y nueva temporada;
-- **Copa del Rey**, cantera, rueda de prensa y junta directiva dinámica;
+- **Copa del Rey**, cantera con categorías Sub-16/Sub-18/Sub-21, rueda de prensa y junta directiva dinámica;
 - **DHA y DHB jugables desde el inicio**, DHB real de dos fases, **agentes libres** procedentes de 1ª Andaluza, **Copa del Rey de 8 equipos DHA** y **EHL**;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
@@ -71,7 +71,7 @@ El juego incluye:
 
 Pendiente:
 
-- escudos oficiales con licencia (ahora hay escudos SVG estilizados);
+- revisar permisos de los escudos oficiales descargados de iSquad;
 - guardado en mitad de un partido en directo;
 - EHL interactiva (ahora se simula);
 - descenso DHB → 1ª Andaluza (esa liga no se simula);
@@ -132,6 +132,7 @@ manager/
 15. [`docs/14_TEST_ESTRESS_10_TEMPORADAS.md`](docs/14_TEST_ESTRESS_10_TEMPORADAS.md) — test de 10 temporadas con mercado y retiros.
 16. [`docs/15_WEB_ALPHA.md`](docs/15_WEB_ALPHA.md) — alpha web local con Flask.
 17. [`docs/16_DISENO_UI.md`](docs/16_DISENO_UI.md) — investigación, paleta, usabilidad, escudos y noticias.
+18. [`docs/17_CANTERA_Y_CATEGORIAS.md`](docs/17_CANTERA_Y_CATEGORIAS.md) — categorías Sub-16/Sub-18/Sub-21 y nombres por comunidad.
 
 ## Datos
 
@@ -139,9 +140,12 @@ manager/
 - `data/cities.json`: coordenadas, aeropuertos y tren.
 - `data/competitions.json`: formatos DHA/DHB/1ª.
 - `data/tactical_roles.json`: formaciones, roles e instrucciones.
+- `data/youth_names.json`: nombres y apellidos por comunidad autónoma.
 - `data/staff_roles.json`: 13 roles de cuerpo técnico.
 - `data/events.json`: plantillas de eventos de partido y mundo.
 - `schema/schema.sql`: 41 tablas SQLite.
+- `../tools/fetch_isquad_crests.py`: descarga y prepara los escudos oficiales de iSquad.
+- `../tools/generate_crests.py`: genera escudos SVG de respaldo.
 
 ## Fuentes y calidad
 

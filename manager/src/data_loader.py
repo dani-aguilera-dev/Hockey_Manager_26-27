@@ -184,6 +184,7 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
         cash = transfer_budget + int(wage_budget * 0.45)
         teams[club["id"]] = TeamState(
             id=club["id"], name=club["name"], league=club["league"], city=club["city"],
+            community=club.get("community", ""),
             players=players, tactics=Tactics(),
             stadium_name=stadium.get("name", ""),
             stadium_capacity=int(stadium.get("capacity", 1000) or 1000),

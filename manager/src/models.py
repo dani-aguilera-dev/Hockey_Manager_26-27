@@ -132,6 +132,16 @@ class PlayerState:
     photo_remote: str = ""
 
     @property
+    def youth_category(self) -> str:
+        if self.age <= 15:
+            return "Sub-16"
+        if self.age <= 17:
+            return "Sub-18"
+        if self.age <= 20:
+            return "Sub-21"
+        return "Senior"
+
+    @property
     def available(self) -> bool:
         return self.injury <= 0 and self.suspension <= 0
 
@@ -217,6 +227,7 @@ class TeamState:
     league: str
     city: str
     players: list[PlayerState]
+    community: str = ""
     tactics: Tactics = field(default_factory=Tactics)
     stadium_name: str = ""
     stadium_capacity: int = 1000
@@ -435,6 +446,7 @@ class TeamState:
     def from_dict(cls, d: dict) -> "TeamState":
         return cls(
             id=d["id"], name=d["name"], league=d["league"], city=d["city"],
+            community=d.get("community", ""),
             players=[PlayerState.from_dict(p) for p in d["players"]],
             tactics=Tactics.from_dict(d.get("tactics", {})),
             stadium_name=d.get("stadium_name", ""), stadium_capacity=d.get("stadium_capacity", 1000),

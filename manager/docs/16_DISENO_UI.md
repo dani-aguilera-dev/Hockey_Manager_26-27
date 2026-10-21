@@ -42,7 +42,7 @@ Conclusión: un juego de gestión no debe parecer una hoja de cálculo. Debe per
 
 ## 3. Paleta
 
-La interfaz es **dark-first**, pensada para sesiones largas ypara que las fotos y los escudos destaquen.
+La interfaz es **dark-first**, pensada para sesiones largas y para que las fotos y los escudos destaquen.
 
 ### Tokens
 
@@ -158,15 +158,11 @@ Todos los pares principales superan **WCAG AA** (4.5:1) y la mayoría superan **
 
 ### Escudos
 
-- Se generaron **29 escudos SVG** (28 clubes activos + 1ª Andaluza) a partir de:
-  - colores del club;
-  - iniciales;
-  - año de fundación;
-  - forma de escudo consistente.
-- Son escudos **estilizados del juego**, no logos oficiales.
-- `crest_src()` busca primero `<club>.png` y después `<club>.svg`, por lo que se pueden sustituir por escudos oficiales sin tocar plantillas.
+- Se descargaron **29 escudos oficiales de iSquad** (28 clubes activos + 1ª Andaluza) con `tools/fetch_isquad_crests.py`.
+- El script localiza cada equipo por su `id_equipo`, descarga el escudo de la cabecera, elimina el fondo blanco a transparente y guarda un PNG de 320 px.
+- `crest_src()` prioriza `<club>.png`; los SVG estilizados quedan como respaldo y se pueden regenerar con `tools/generate_crests.py`.
 - Se usan en dashboard, plantilla, tabla, Copa, previa, directo, parte, mercado, nuevo juego y fin de temporada.
-- Regeneración reproducible: `python3 tools/generate_crests.py`.
+- Crédito: escudos y fotos proceden de iSquad; los datos, de RFEH/iSquad y del modelo propio.
 
 Para sustituir un escudo por uno oficial:
 
@@ -243,7 +239,7 @@ manager/
 
 ## 8. Próximos pasos recomendados
 
-1. Escudos oficiales con permiso o licencia, sustituyendo los SVG.
+1. Revisar permisos de uso de los escudos oficiales y acreditarlos en la publicación.
 2. Modo claro con los mismos tokens semánticos.
 3. Editor de once con arrastrar y soltar, manteniendo los selects como alternativa accesible.
 4. Comparador de jugadores y filtros guardados en mercado.

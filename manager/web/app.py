@@ -33,7 +33,7 @@ from src.season import (advance_to_next_season, ensure_week_training,
                         simulate_cup_round)
 from src.training import (DAYS, PLAN_PRESETS, SESSION_ORDER, SESSION_TYPES,
                           apply_training_plan, auto_plan, format_plan, plan_name)
-from src.youth import promote_youth, release_youth
+from src.youth import CATEGORY_AGES, CATEGORY_LABELS, YOUTH_CATEGORIES, promote_youth, release_youth
 
 BASE = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BASE.parent
@@ -180,7 +180,7 @@ def initials(name):
 
 def crest_src(team):
     tid = getattr(team, "id", team)
-    for ext in ("png", "svg"):
+    for ext in ("png", "webp", "jpg", "jpeg", "svg"):
         if (BASE / "web" / "static" / "crests" / f"{tid}.{ext}").exists():
             return url_for("static", filename=f"crests/{tid}.{ext}")
     return url_for("static", filename=f"crests/{tid}.svg")
@@ -583,7 +583,15 @@ def staff_fire(role):
 @app.route("/youth")
 @login_required
 def youth():
-    ctx = state_context(get_state())
+    state = get_state()
+    ctx = state_context(state)
+    groups = []
+    for category in YOUTH_CATEGORIES:
+        members = [p for p in state.user_team.youth if p.youth_category == category]
+        if members:
+            groups.append((category, CATEGORY_LABELS[category], members))
+    ctx["youth_groups"] = groups
+    ctx["category_ages"] = CATEGORY_AGES
     return render_template("youth.html", **ctx)
 
 
