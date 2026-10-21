@@ -2,6 +2,7 @@ from src.season import new_game, play_round, simulate_cup_round, simulate_cup_re
 from src.cup import new_cup, cup_round_fixtures, cup_status_text
 from src.youth import promote_youth, develop_youth, intake
 from src.press import press_questions, answer_press, mark_press_done
+from src.ehl import create_ehl, simulate_ehl
 import random
 
 
@@ -10,10 +11,10 @@ def test_cup_bracket_and_rounds():
     new_cup(state)
     assert state.cup_active
     assert state.cup_round == 1
-    assert len(cup_round_fixtures(state)) == 8
+    assert len(cup_round_fixtures(state)) == 16
     simulate_cup_round(state)
     assert state.cup_round == 2
-    assert len(cup_round_fixtures(state)) == 4
+    assert len(cup_round_fixtures(state)) == 8
     simulate_cup_remaining(state)
     assert not state.cup_active
     assert state.cup_winner_id in state.teams
@@ -44,6 +45,15 @@ def test_press_conference():
     mark_press_done(state)
     assert state.press_done_round == state.round
     assert state.press_history
+
+
+def test_ehl_tournament():
+    state = new_game("cd-terrassa", "Test", seed=605)
+    create_ehl(state)
+    assert len(state.ehl["participants"]) == 8
+    simulate_ehl(state)
+    assert not state.ehl["active"]
+    assert state.ehl["winner_name"]
 
 
 def test_board_review_after_season():

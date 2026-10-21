@@ -16,6 +16,7 @@ from .training import auto_plan, apply_training_plan
 from .finance import apply_round_finances
 from .youth import initial_youth, develop_youth, intake, generate_youth
 from .cup import new_cup, cup_round_fixtures, cup_start, ROUND_NAMES, ROUND_PHASES
+from .ehl import create_ehl, simulate_ehl
 
 DHA_TEAMS = 12
 START_DATE = "2026-09-20"
@@ -525,42 +526,74 @@ def _background_table(state: GameState, league: str) -> list[dict]:
 
 
 def simulate_cup_round(state: GameState, user_lineup_ids: list[str] | None = None) -> dict | None:
-    """Simula la ronda actual de Copa del Rey y genera la siguiente."""
+    """Simula la ronda actual de Copa (ida/vuelta salvo la final) y genera la siguiente."""
     if not state.cup_active:
         return None
     fixtures = cup_round_fixtures(state)
     if not fixtures:
         return None
     current_round = state.cup_round
-    payload = None
-    winners = []
-    for idx, fx in enumerate(fixtures):
-        if fx.played:
-            winners.append(fx.home_id if fx.home_goals > fx.away_goals else fx.away_id)
-            continue
-        rng = random.Random(state.seed + current_round * 300 + idx)
-        is_user = state.club_id in (fx.home_id, fx.away_id)
-        line, bench = make_lineup(state.user_team, user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)) if is_user else (None, None)
-        res = _simulate_fixture(state, fx, rng, user_lineup=line, user_bench=bench, neutral=False, knockout=True)
-        if res.shootout:
-            winner = res.shootout["winner_id"]
+    ties: dict[str, list[Fixture]] = {}
+    for fx in fixtures:
+        key = fx.id.split("-L")[0] if "-L" in fx.id else fx.id
+        ties.setdefault(key, []).append(fx)
+    winners: list[str] = []
+    user_tie: dict | None = None
+    for tie_idx, (key, legs) in enumerate(sorted(ties.items())):
+        legs.sort(key=lambda f: f.id)
+        team_a, team_b = legs[0].home_id, legs[0].away_id
+        leg_payloads = []
+        for leg_idx, fx in enumerate(legs):
+            rng = random.Random(state.seed + current_round * 300 + tie_idx * 10 + leg_idx)
+            is_user = state.club_id in (fx.home_id, fx.away_id)
+            line, bench = make_lineup(state.user_team, user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)) if is_user else (None, None)
+            knockout = current_round == 4 or len(legs) == 1
+            res = _simulate_fixture(state, fx, rng, user_lineup=line, user_bench=bench, neutral=False, knockout=knockout)
+            if is_user:
+                payload = _user_result_payload(state, fx, res, fx.travel)
+                state.last_result = payload
+                leg_payloads.append(payload)
+        goals_a = sum(f.home_goals if f.home_id == team_a else f.away_goals for f in legs)
+        goals_b = sum(f.away_goals if f.home_id == team_a else f.home_goals for f in legs)
+        if goals_a == goals_b:
+            if len(legs) == 1 and legs[0].events:
+                # La final ya se ha resuelto con shootout en el motor.
+                res = None
+                # el ganador se decide abajo con fuerza + azar
+            strength_a = sum(state.teams[team_a].lineup_strength(state.teams[team_a].auto_lineup()[0]))
+            strength_b = sum(state.teams[team_b].lineup_strength(state.teams[team_b].auto_lineup()[0]))
+            prob_a = 0.5 + (strength_a - strength_b) / 200
+            winner = team_a if random.Random(state.seed + tie_idx * 7 + current_round).random() < max(0.2, min(0.8, prob_a)) else team_b
         else:
-            winner = fx.home_id if res.home_goals > res.away_goals else fx.away_id
+            winner = team_a if goals_a > goals_b else team_b
         winners.append(winner)
-        if is_user:
-            payload = _user_result_payload(state, fx, res, fx.travel)
-            state.last_result = payload
+        if leg_payloads:
+            user_tie = {"round": current_round, "team_a": team_a, "team_b": team_b,
+                        "goals_a": goals_a, "goals_b": goals_b, "winner_id": winner,
+                        "legs": leg_payloads}
     if current_round < 4:
         next_round = current_round + 1
         next_phase = ROUND_PHASES[next_round]
-        d = cup_start(state).toordinal() + [24, 52, 122, 171][next_round - 1]
         from datetime import date as _date
-        next_date = _date.fromordinal(d).isoformat()
+        base = cup_start(state).toordinal() + [24, 52, 122, 171][next_round - 1]
         for i in range(0, len(winners), 2):
-            state.fixtures.append(Fixture(
-                id=f"C{next_round}-{i//2+1}", round=100 + next_round, date=next_date,
-                home_id=winners[i], away_id=winners[i + 1], phase=next_phase,
-            ))
+            tie_no = i // 2 + 1
+            if next_round < 4:
+                leg1 = _date.fromordinal(base).isoformat()
+                leg2 = _date.fromordinal(base + 7).isoformat()
+                state.fixtures.append(Fixture(
+                    id=f"C{next_round}-{tie_no}-L1", round=100 + next_round, date=leg1,
+                    home_id=winners[i], away_id=winners[i + 1], phase=next_phase,
+                ))
+                state.fixtures.append(Fixture(
+                    id=f"C{next_round}-{tie_no}-L2", round=100 + next_round, date=leg2,
+                    home_id=winners[i + 1], away_id=winners[i], phase=next_phase,
+                ))
+            else:
+                state.fixtures.append(Fixture(
+                    id=f"C4-F", round=104, date=_date.fromordinal(base).isoformat(),
+                    home_id=winners[i], away_id=winners[i + 1], phase=next_phase,
+                ))
         state.cup_round = next_round
     else:
         winner = winners[0] if winners else ""
@@ -573,9 +606,7 @@ def simulate_cup_round(state: GameState, user_lineup_ids: list[str] | None = Non
             state.user_team.fan_confidence = min(100, state.user_team.fan_confidence + 8)
             state.inbox.append({"date": state.date, "from": "Prensa", "subject": "¡Campeón de Copa!",
                                 "body": "El club ha ganado la Copa del Rey. La afición está eufórica."})
-    return payload
-
-
+    return {"user_tie": user_tie, "round": current_round}
 def simulate_cup_remaining(state: GameState) -> None:
     while state.cup_active:
         simulate_cup_round(state)
@@ -862,6 +893,8 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
         state.promoted_ids = [t.id for t in table_a[:2]]
         state.relegated_ids = [r["team"].id for r in dha_rows[-2:]]
         state.playout = {}
+    create_ehl(state)
+    simulate_ehl(state)
     state.phase = "season_end"
     state.date = f"{int(state.season[:4]) + 1}-06-30"
     _board_review(state)
@@ -905,6 +938,8 @@ def season_summary(state: GameState) -> dict:
         "promoted": promoted_names,
         "relegated": relegated_names,
         "cup_winner": state.teams[state.cup_winner_id].name if state.cup_winner_id in state.teams else None,
+        "ehl_winner": state.ehl.get("winner_name", "") if state.ehl else None,
+        "ehl_participants": state.ehl.get("participants", []) if state.ehl else [],
         "board_review": state.board_review,
         "direct_relegated": state.teams[state.playout["direct_relegated_id"]].name if state.playout.get("direct_relegated_id") in state.teams else None,
     }
@@ -922,6 +957,12 @@ def advance_to_next_season(state: GameState) -> None:
         if tid in state.teams:
             state.teams[tid].league = "DHB"
     rng = random.Random(state.seed + new_year * 100)
+    kept_free = []
+    for p in state.free_agents:
+        p.age += 1
+        if p.age < 37:
+            kept_free.append(p)
+    state.free_agents = kept_free
     for team in state.teams.values():
         if team.league not in ("DHA", "DHB"):
             continue

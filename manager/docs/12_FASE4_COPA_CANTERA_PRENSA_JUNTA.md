@@ -9,7 +9,9 @@
 Formato:
 
 - 16 equipos: los 12 DHA y los 4 mejores DHB por potencial.
-- Eliminatorias a partido único: octavos, cuartos, semifinal, final.
+- Octavos, cuartos y semifinal a **ida y vuelta**.
+- Final a partido único.
+- En caso de empate global, shootout.
 - Sede del equipo que figure como local en el sorteo.
 - Empate en eliminatoria → shootout.
 - El campeón recibe **50.000 €** y confianza para la junta.
@@ -122,7 +124,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado actual: **42 tests superados**.
+Resultado actual: **43 tests superados**.
 
 ---
 

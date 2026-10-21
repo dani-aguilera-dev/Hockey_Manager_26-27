@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-21 — Copa a ida y vuelta y EHL
+
+### Añadido
+
+- Copa del Rey a doble partido en octavos, cuartos y semifinal.
+- Final a partido único y shootout si el global acaba empatado.
+- EHL de final a ocho:
+  - dos primeros de DHA;
+  - campeón de Copa si es DHA;
+  - cinco clubes europeos modelo;
+  - cuartos, semifinal y final;
+  - campeón en el resumen de temporada.
+- Tests de Copa a doble partido y EHL.
+
+### Cambiado
+
+- La Copa ya no se resuelve a partido único salvo la final.
+- El resumen de temporada muestra el campeón de Copa y de EHL.
+- Tests ampliados a 43.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 43 tests superados.
+
+---
+
 ## 2026-10-21 — Fase 5A: DHB real y agentes libres
 
 ### Añadido

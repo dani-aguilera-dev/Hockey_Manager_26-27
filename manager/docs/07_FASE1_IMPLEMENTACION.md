@@ -22,7 +22,8 @@
 - Gestionar **finanzas**: caja, presupuesto de fichajes, salarios, patrocinio, taquilla y viajes.
 - Usar el **mercado**: buscar jugadores, hacer ofertas, renovar contratos, contratar/despedir staff y recibir ofertas.
 - Continuar **varias temporadas**, con ascensos, descensos y DHA/DHB.
-- Jugar la **Copa del Rey**, gestionar la **cantera**, responder a la **prensa** y revisar la **junta directiva**.
+- Jugar la **Copa del Rey** a ida y vuelta, gestionar la **cantera**, responder a la **prensa** y revisar la **junta directiva**.
+- Competir en la **EHL** si el club se clasifica.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.
 - Elegir viaje en los partidos fuera de casa (económico, equilibrado o premium).
@@ -61,7 +62,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **42 tests superados**.
+Resultado esperado: **43 tests superados**.
 
 ---
 
@@ -264,7 +265,7 @@ python3 -m pytest src/tests -q
 - El entrenamiento es semanal y grupal; no hay sesiones individuales, mercado, cantera, prensa ni multi-temporada.
 - El mercado no incluye cesiones, cláusulas, agentes ni primas por objetivos.
 - La DHB tiene dos fases reales, pero no desciende a 1ª Andaluza porque esa liga no se simula.
-- La Copa no tiene doble partido ni cabezas de serie.
+- La Copa no tiene cabezas de serie ni sorteo dirigido.
 - La cantera y la prensa son sistemas simplificados.
 - Parte del staff y de la junta son nombres de modelo, no datos oficiales.
 - Las finanzas son básicas: taquilla y viajes; los salarios no se descuentan todavía.
@@ -309,6 +310,6 @@ El detalle de controles, componentes de gestión y lectura táctica está en
 2. Moral y dinámica de grupo.
 3. Junta, objetivos y finanzas completas.
 4. Logística avanzada con decisiones de hotel/comida.
-5. Copa a doble partido y EHL.
+5. Descenso DHB → 1ª Andaluza y sorteo de Copa con cabezas de serie.
 6. Partidos interactivos de Final Four.
 7. Multi-temporada y mercado.

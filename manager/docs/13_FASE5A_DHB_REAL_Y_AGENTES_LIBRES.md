@@ -84,13 +84,28 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado actual: **42 tests superados**.
+Resultado actual: **43 tests superados**.
 
 ---
 
-## 6. Pendiente de Fase 5A
+## 6. Copa a doble partido
 
-- Copa del Rey a doble partido.
-- EHL / competición europea.
+- Octavos, cuartos y semifinal a ida y vuelta.
+- La final se juega a partido único.
+- El ganador se decide por el global de la eliminatoria.
+- Si el global termina empatado, se resuelve con shootout.
+- Los partidos de Copa no cuentan para la clasificación de liga.
+
+## 7. EHL
+
+- Torneo europeo de final a ocho.
+- Participan los dos primeros de DHA, el campeón de Copa si es DHA y cinco clubes europeos modelo.
+- Cuadro de cuartos, semifinal y final.
+- Se simula al final de la temporada y el campeón aparece en el resumen.
+- Si tu club se clasifica, aparece entre los participantes.
+
+## 8. Pendiente de Fase 5A
+
 - Descenso DHB → 1ª Andaluza (requiere simular esa liga).
 - Sorteo de Copa con cabezas de serie.
+- EHL interactiva con partidos en directo.

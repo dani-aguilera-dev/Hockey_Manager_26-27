@@ -819,20 +819,26 @@ class GameUI:
             if op in ("j", "s"):
                 from .season import simulate_cup_round
                 payload = simulate_cup_round(s, s.manual_lineup or None)
-                if payload:
-                    self.print_cup_report(payload)
+                if payload and payload.get("user_tie"):
+                    self.print_cup_tie_report(payload["user_tie"])
                     pause()
                 else:
                     print("\nRonda simulada.")
                     pause()
                 continue
 
-    def print_cup_report(self, p: dict):
-        header(f"COPA · {p['home_name'].upper()} {p['home_goals']}-{p['away_goals']} {p['away_name'].upper()}")
-        print(f"{fmt_date(p['date'])} · {p['result']} ({p['user_goals']}-{p['user_against']})")
-        for e in p.get("events", []):
-            if e.get("type") in ("goal", "card", "injury", "substitution"):
-                print(f"  {e.get('minute', 0):02d}' {e.get('text', '')}")
+    def print_cup_tie_report(self, tie: dict):
+        s = self.state
+        a = s.teams.get(tie["team_a"])
+        b = s.teams.get(tie["team_b"])
+        header(f"COPA · {a.name.upper()} vs {b.name.upper()}")
+        for i, leg in enumerate(tie.get("legs", []), 1):
+            print(f"  Ida/Vuelta {i}: {leg['home_name']} {leg['home_goals']}-{leg['away_goals']} {leg['away_name']} · {fmt_date(leg['date'])}")
+            for e in leg.get("events", []):
+                if e.get("type") in ("goal", "card", "injury", "substitution"):
+                    print(f"    {e.get('minute', 0):02d}' {e.get('text', '')}")
+        print(f"  Global: {a.name} {tie['goals_a']}-{tie['goals_b']} {b.name}")
+        print(f"  Pasa: {s.teams[tie['winner_id']].name if tie.get('winner_id') in s.teams else '—'}")
 
     # ------------------------------------------------------------- partido
     def matchday(self):
@@ -1286,6 +1292,7 @@ class GameUI:
         header(f"FIN DE TEMPORADA · {s.season}")
         print(f"Campeón de {summ.get('competition', s.competition)}: {summ.get('champion') or '—'}")
         print(f"Campeón de Copa: {summ.get('cup_winner') or '—'}")
+        print(f"Campeón de EHL: {summ.get('ehl_winner') or '—'}")
         print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/{len(summ.get('table', []))}")
         mg = s.user_team.management_profile()
         print(f"Gestión final: {mg['score']:.1f}/100 (bonus {mg['bonus']:+.2f}) · Cohesión {s.user_team.cohesion}/20 · Mánager {s.user_team.manager_rating}/100")

@@ -52,7 +52,7 @@ La Fase 1 incluye:
 - **mercado y contratos**: ventanas de verano/invierno, ofertas, renovaciones, contratación de staff y mercado IA;
 - **multi-temporada**: ascensos, descensos, DHA/DHB, contratos, canteranos y nueva temporada;
 - **Copa del Rey**, cantera, rueda de prensa y junta directiva dinámica;
-- **DHB real de dos fases** y **agentes libres** procedentes de 1ª Andaluza;
+- **DHB real de dos fases**, **agentes libres** procedentes de 1ª Andaluza, **Copa a ida y vuelta** y **EHL**;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.

@@ -34,10 +34,14 @@ def new_cup(state: GameState) -> None:
     start = cup_start(state) + timedelta(days=CUP_OFFSETS[0])
     state.fixtures = [f for f in state.fixtures if not f.phase.startswith("cup_")]
     for i in range(8):
+        a, b = teams[2 * i], teams[2 * i + 1]
         state.fixtures.append(Fixture(
-            id=f"C1-{i+1}", round=101, date=start.isoformat(),
-            home_id=teams[2 * i].id, away_id=teams[2 * i + 1].id,
-            phase=ROUND_PHASES[1],
+            id=f"C1-{i+1}-L1", round=101, date=start.isoformat(),
+            home_id=a.id, away_id=b.id, phase=ROUND_PHASES[1],
+        ))
+        state.fixtures.append(Fixture(
+            id=f"C1-{i+1}-L2", round=101, date=(start + timedelta(days=7)).isoformat(),
+            home_id=b.id, away_id=a.id, phase=ROUND_PHASES[1],
         ))
     state.cup_round = 1
     state.cup_active = True
