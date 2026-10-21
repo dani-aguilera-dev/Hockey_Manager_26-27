@@ -517,6 +517,7 @@ class GameState:
     dhb_groups: dict[str, list[str]] = field(default_factory=dict)
     dhb_group: str = "A"
     ehl: dict[str, Any] = field(default_factory=dict)
+    retirements: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def total_rounds(self) -> int:
@@ -590,6 +591,7 @@ class GameState:
             "dhb_groups": self.dhb_groups,
             "dhb_group": self.dhb_group,
             "ehl": self.ehl,
+            "retirements": self.retirements,
         }
 
     @classmethod
@@ -624,4 +626,5 @@ class GameState:
             dhb_groups=d.get("dhb_groups", {}),
             dhb_group=d.get("dhb_group", "A"),
             ehl=d.get("ehl", {}),
+            retirements=d.get("retirements", []),
         )

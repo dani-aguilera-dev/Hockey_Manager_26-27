@@ -173,7 +173,11 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
                 else:
                     p.salary = int(wage_budget * w / total_w)
                     assigned += p.salary
-        transfer_budget = int(fin.get("transfer_budget", 0) or 0)
+            # Suelo salarial: una estrella no puede cobrar como un suplente.
+            for p in players:
+                p.salary = max(p.salary, int(max(5000, (p.overall - 48) * 700)))
+            wage_budget = max(wage_budget, sum(p.salary for p in players))
+        transfer_budget = int(int(fin.get("transfer_budget", 0) or 0) * 1.5)
         cash = transfer_budget + int(wage_budget * 0.45)
         teams[club["id"]] = TeamState(
             id=club["id"], name=club["name"], league=club["league"], city=club["city"],

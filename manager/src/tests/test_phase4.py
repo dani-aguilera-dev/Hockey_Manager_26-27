@@ -1,4 +1,4 @@
-from src.season import new_game, play_round, simulate_cup_round, simulate_cup_remaining, season_summary
+from src.season import new_game, play_round, simulate_cup_round, simulate_cup_remaining, season_summary, _process_age_and_retirements
 from src.cup import new_cup, cup_round_fixtures, cup_status_text
 from src.youth import promote_youth, develop_youth, intake
 from src.press import press_questions, answer_press, mark_press_done
@@ -54,6 +54,15 @@ def test_ehl_tournament():
     simulate_ehl(state)
     assert not state.ehl["active"]
     assert state.ehl["winner_name"]
+
+
+def test_retirements():
+    state = new_game("cd-terrassa", "Test", seed=606)
+    player = state.user_team.players[0]
+    player.age = 39
+    _process_age_and_retirements(state)
+    assert state.retirements
+    assert all(p.id != player.id for p in state.user_team.players)
 
 
 def test_board_review_after_season():

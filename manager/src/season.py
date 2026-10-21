@@ -861,6 +861,57 @@ def _board_review(state: GameState) -> dict:
     return review
 
 
+def _process_age_and_retirements(state: GameState) -> None:
+    """Envejece a los jugadores y decide retiradas al final de la temporada."""
+    state.retirements = []
+    rng = random.Random(state.seed + int(state.season[:4]) + 313)
+    for team in state.teams.values():
+        if team.league not in ("DHA", "DHB"):
+            continue
+        kept = []
+        for p in team.players:
+            p.age += 1
+            chance = 0.0
+            if p.age >= 40:
+                chance = 1.0
+            elif p.age >= 37:
+                chance = 0.75
+            elif p.age >= 35:
+                chance = 0.40
+            elif p.age >= 33:
+                chance = 0.15
+            elif p.age >= 31:
+                chance = 0.03
+            if p.overall < 58 and p.age >= 30:
+                chance += 0.05
+            if rng.random() < chance:
+                state.retirements.append({
+                    "season": state.season, "player": p.name, "club": team.name,
+                    "age": p.age, "overall": round(p.overall, 1), "goals": p.season_goals,
+                })
+                if p.overall >= 78 or team.id == state.club_id:
+                    state.inbox.append({
+                        "date": state.date, "from": "Club",
+                        "subject": f"Retirada de {p.name}",
+                        "body": f"{p.name} se retira a los {p.age} años tras una carrera en {team.name}.",
+                    })
+                continue
+            kept.append(p)
+        team.players = kept
+    kept_free = []
+    for p in state.free_agents:
+        p.age += 1
+        chance = 0.95 if p.age >= 37 else (0.55 if p.age >= 35 else (0.25 if p.age >= 33 else 0.0))
+        if rng.random() < chance:
+            state.retirements.append({
+                "season": state.season, "player": p.name, "club": "Agente libre",
+                "age": p.age, "overall": round(p.overall, 1), "goals": p.season_goals,
+            })
+        else:
+            kept_free.append(p)
+    state.free_agents = kept_free
+
+
 def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = None) -> None:
     if state.cup_active:
         simulate_cup_remaining(state)
@@ -895,6 +946,7 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
         state.playout = {}
     create_ehl(state)
     simulate_ehl(state)
+    _process_age_and_retirements(state)
     state.phase = "season_end"
     state.date = f"{int(state.season[:4]) + 1}-06-30"
     _board_review(state)
@@ -940,6 +992,7 @@ def season_summary(state: GameState) -> dict:
         "cup_winner": state.teams[state.cup_winner_id].name if state.cup_winner_id in state.teams else None,
         "ehl_winner": state.ehl.get("winner_name", "") if state.ehl else None,
         "ehl_participants": state.ehl.get("participants", []) if state.ehl else [],
+        "retirements": state.retirements,
         "board_review": state.board_review,
         "direct_relegated": state.teams[state.playout["direct_relegated_id"]].name if state.playout.get("direct_relegated_id") in state.teams else None,
     }
@@ -957,20 +1010,13 @@ def advance_to_next_season(state: GameState) -> None:
         if tid in state.teams:
             state.teams[tid].league = "DHB"
     rng = random.Random(state.seed + new_year * 100)
-    kept_free = []
-    for p in state.free_agents:
-        p.age += 1
-        if p.age < 37:
-            kept_free.append(p)
-    state.free_agents = kept_free
     for team in state.teams.values():
         if team.league not in ("DHA", "DHB"):
             continue
         kept = []
         for p in team.players:
-            p.age += 1
             expired = int(p.contract_until[:4]) <= new_year
-            if p.age >= 37 or expired:
+            if expired:
                 continue
             p.apps = p.season_goals = p.season_assists = 0
             p.rating_sum = 0.0

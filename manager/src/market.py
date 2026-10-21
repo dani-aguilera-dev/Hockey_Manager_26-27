@@ -82,7 +82,9 @@ def _contract_until(start_year: int, years: int) -> str:
 
 
 def _club_value(player: PlayerState) -> int:
-    return max(int(player.value * 0.70), int((max(1, player.overall - 40) ** 2) * 120))
+    age_factor = 1.15 if player.age <= 24 else (1.0 if player.age <= 29 else (0.65 if player.age <= 32 else 0.35))
+    base = int((max(1, player.overall - 40) ** 2) * 180 * age_factor)
+    return max(int(player.value * 1.10), base, 50000)
 
 
 def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int, years: int,

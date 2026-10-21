@@ -1334,6 +1334,11 @@ class GameUI:
                 relegated = s.teams.get(p.get("relegated_id"), None)
                 print(f"    Asciende {promoted.name if promoted else '—'}; desciende {relegated.name if relegated else '—'}. El 12º también baja: {summ.get('direct_relegated') or '—'}.")
             print(f"    {p.get('note','')}")
+        rets = summ.get("retirements", [])
+        if rets:
+            section("RETIROS")
+            for r in sorted(rets, key=lambda x: -x.get("overall", 0))[:10]:
+                print(f"  {r['player']:<34} {r['club']:<30} {r['age']:>2} años · OVR {r['overall']:>4.1f}")
         section("MÁXIMOS GOLEADORES")
         for i, sc in enumerate(summ.get("top_scorers", [])[:10], 1):
             print(f"  {i:>2}. {sc['player']:<38} {sc['team']:<34} {sc['goals']:>3} goles · {sc['assists']:>2} asistencias")

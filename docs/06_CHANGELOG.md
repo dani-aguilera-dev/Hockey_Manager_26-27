@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-21 — Economía, retiradas y test de 10 temporadas
+
+### Añadido
+
+- Retiradas de jugadores al final de temporada:
+  - probabilidad según edad y nivel;
+  - aviso en inbox para jugadores importantes;
+  - registro en el resumen de temporada;
+  - sustitución con canteranos.
+- Ajuste económico:
+  - presupuestos de fichajes ampliados;
+  - suelo salarial para estrellas;
+  - valoración de mercado con factor de edad;
+  - fichajes de mayor cuantía.
+- Test de 10 temporadas con mercado, agentes libres y retiradas.
+- Actualización de `manager/docs/14_TEST_ESTRESS_10_TEMPORADAS.md`.
+
+### Resultado
+
+- 41 movimientos de mercado.
+- 29 retiradas.
+- 10 temporadas sin errores.
+- DHA/DHB estables y plantillas de al menos 18 jugadores.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 44 tests superados.
+
+---
+
 ## 2026-10-21 — Test de estrés de 10 temporadas con mercado
 
 ### Añadido
