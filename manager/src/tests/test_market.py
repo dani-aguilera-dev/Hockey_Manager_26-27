@@ -92,6 +92,21 @@ def test_free_agents_from_primera_andaluza():
     assert not any(p.id == free.id for p in state.free_agents)
 
 
+def test_new_game_dhb_is_playable():
+    state = new_game("pozuelo", "Test", seed=508)
+    assert state.competition == "DHB"
+    assert state.dhb_phase == 1
+    assert len(state.dhb_groups["A"]) == 8
+    assert len(state.dhb_groups["B"]) == 8
+    regular = [f for f in state.fixtures if f.phase == "regular"]
+    assert len(regular) == 112
+    assert state.total_rounds == 21
+    for _ in range(14):
+        play_round(state, None, "equilibrado")
+    assert state.dhb_phase == 2
+    assert state.round == 15
+
+
 def test_dhb_two_phase_setup():
     from src.season import setup_dhb_phase1, setup_dhb_phase2
     state = new_game("cd-terrassa", "Test", seed=507)

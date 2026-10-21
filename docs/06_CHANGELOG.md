@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-21 — DHB jugable desde el inicio
+
+### Añadido
+
+- Selección de club DHA o DHB al empezar una partida.
+- La DHB se puede jugar completa desde la primera temporada:
+  - dos grupos de 8;
+  - fase 2;
+  - 21 jornadas;
+  - Final Four y ascenso.
+- `--auto` acepta clubes DHA y DHB.
+- Test de creación de partida con club DHB.
+
+### Cambiado
+
+- El menú de selección de club permite cambiar de liga con `L`.
+- El dashboard, calendario y clasificación muestran el grupo DHB.
+- Tests ampliados a 45.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 45 tests superados.
+
+---
+
 ## 2026-10-21 — Economía, retiradas y test de 10 temporadas
 
 ### Añadido

@@ -12,18 +12,18 @@ from .ui import GameUI, money
 
 def auto_season(club_id: str | None, manager: str, seed: int | None) -> int:
     teams, _, _ = load_teams()
-    dha = sorted(dha_teams(teams), key=lambda t: t.name)
+    playable = sorted([t for t in teams.values() if t.league in ("DHA", "DHB")], key=lambda t: (t.league, t.name))
     if club_id is None:
-        club_id = dha[0].id
-    if club_id not in teams or teams[club_id].league != "DHA":
-        print(f"Club no válido para Fase 1: {club_id}")
-        print("Clubes DHA disponibles:")
-        for t in dha:
-            print(f"  {t.id:<24} {t.name}")
+        club_id = next(t.id for t in playable if t.league == "DHA")
+    if club_id not in teams or teams[club_id].league not in ("DHA", "DHB"):
+        print(f"Club no válido para esta fase: {club_id}")
+        print("Clubes disponibles (DHA/DHB):")
+        for t in playable:
+            print(f"  {t.id:<24} {t.league:<4} {t.name}")
         return 1
     state = new_game(club_id, manager, seed)
-    print(f"Simulando temporada 2026-27 con {state.user_team.name}...")
-    for _ in range(22):
+    print(f"Simulando temporada 2026-27 con {state.user_team.name} ({state.competition})...")
+    for _ in range(state.total_rounds):
         p = play_round(state, user_lineup_ids=None, travel_option_id="equilibrado")
         if p:
             print(f"J{p['round']:>2}: {p['home_name']} {p['home_goals']}-{p['away_goals']} {p['away_name']} · {p['result']}")
@@ -33,7 +33,7 @@ def auto_season(club_id: str | None, manager: str, seed: int | None) -> int:
     for row in summ["table"]:
         print(f"{row['position']:>3}  {row['team']:<40} {row['played']:>3} {row['won']:>3} {row['drawn']:>3} {row['lost']:>3} {row['gf']:>3} {row['ga']:>3} {row['gd']:>+4} {row['points']:>4}")
     print(f"\nCampeón: {summ.get('champion')}")
-    print(f"Tu posición: {summ.get('user_position')}º/12")
+    print(f"Tu posición: {summ.get('user_position')}º/{len(summ.get('table', []))}")
     print("\nMÁXIMOS GOLEADORES")
     for i, sc in enumerate(summ["top_scorers"][:10], 1):
         print(f"{i:>2}. {sc['player']:<38} {sc['team']:<34} {sc['goals']:>3} goles")
@@ -44,7 +44,7 @@ def auto_season(club_id: str | None, manager: str, seed: int | None) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Hockey Manager España 2026-27 · Fase 1")
+    parser = argparse.ArgumentParser(description="Hockey Manager España 2026-27 · DHA/DHB")
     parser.add_argument("--auto", action="store_true", help="Simular una temporada completa sin interacción")
     parser.add_argument("--club", help="ID del club DHA (ej. cd-terrassa)")
     parser.add_argument("--manager", default="Entrenador", help="Nombre del entrenador")

@@ -165,22 +165,28 @@ class GameUI:
     # ------------------------------------------------------------- club
     def choose_club(self) -> TeamState | None:
         teams, _, _ = load_teams()
-        dha = sorted([t for t in teams.values() if t.league == "DHA"], key=lambda t: t.name)
         while True:
-            section("ELIGE TU CLUB · DHA")
+            league_choice = ask("Liga: [D] DHA · [H] DHB (Enter = DHA): ").lower()
+            if league_choice in ("v",):
+                return None
+            league = "DHB" if league_choice in ("h", "dhb") else "DHA"
+            clubs = sorted([t for t in teams.values() if t.league == league], key=lambda t: t.name)
+            section(f"ELIGE TU CLUB · {league}")
             print(f"{'#':>3}  {'Club':<36} {'Ciudad':<18} {'Estadio':<30} {'Exigencia':<10}")
             line()
-            for i, t in enumerate(dha, 1):
+            for i, t in enumerate(clubs, 1):
                 club = self.clubs_by_id.get(t.id, {})
                 stadium = club.get("stadium", {}).get("name", t.stadium_name)
                 print(f"{i:>3}  {short(t.name,36):<36} {short(t.city,18):<18} {short(stadium,30):<30} {difficulty(t.board_expectation):<10}")
-            raw = ask("\nNúmero de club (Enter = volver): ")
+            raw = ask("\nNúmero de club (Enter = volver, L = cambiar liga): ")
             if not raw:
                 return None
-            if not raw.isdigit() or not (1 <= int(raw) <= len(dha)):
+            if raw.lower() == "l":
+                continue
+            if not raw.isdigit() or not (1 <= int(raw) <= len(clubs)):
                 print("Opción no válida.")
                 continue
-            team = dha[int(raw) - 1]
+            team = clubs[int(raw) - 1]
             self.show_dossier(team)
             ok = ask("\n[Enter] aceptar el puesto   [V] volver: ").lower()
             if ok in ("", "s", "enter"):

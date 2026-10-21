@@ -30,15 +30,16 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
     teams, clubs_by_id, cities_by_name = load_teams()
     if club_id not in teams:
         raise ValueError(f"Club desconocido: {club_id}")
-    if teams[club_id].league != "DHA":
-        raise ValueError("La Fase 1 solo permite dirigir clubes de DHA")
+    if teams[club_id].league not in ("DHA", "DHB"):
+        raise ValueError("Solo se puede dirigir un club de DHA o DHB")
+    league = teams[club_id].league
     dha_ids = sorted([t.id for t in teams.values() if t.league == "DHA"])
-    fixtures = create_dha_fixtures(dha_ids, START_DATE)
+    fixtures = create_dha_fixtures(dha_ids, START_DATE) if league == "DHA" else []
     state = GameState(
         manager_name=manager_name, club_id=club_id, season="2026-27",
-        competition="DHA",
+        competition=league,
         seed=seed if seed is not None else random.randint(1, 999_999),
-        round=1, date=fixtures[0].date, fixtures=fixtures, teams=teams,
+        round=1, date=(fixtures[0].date if fixtures else START_DATE), fixtures=fixtures, teams=teams,
     )
     # La 1ª Andaluza no se simula: sus jugadores pasan al mercado como agentes libres.
     state.free_agents = []
@@ -56,14 +57,16 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
             for p in t.players:
                 p.form = 6.2 + random.Random(state.seed + zlib.crc32(p.id.encode("utf-8")) % 1000).random() * 0.9
     initial_youth(state.teams, state.seed)
+    if league == "DHB":
+        setup_dhb_phase1(state, START_DATE)
     new_cup(state)
     state.inbox.append({
         "date": "2026-08-01", "from": "Junta Directiva",
         "subject": f"Bienvenido al {state.user_team.name}",
         "body": (f"La junta te confía el primer equipo para la temporada 2026-27. "
                  f"Objetivo: {state.user_team.board_expectation}. "
-                 "La DHA arranca el 20 de septiembre. Tienes 22 jornadas para meter al equipo en el Top 4; "
-                 "después se disputarán el Final Four y el playout."),
+                 f"La {state.competition} arranca el 20 de septiembre. "
+                 f"Tienes {state.total_rounds} jornadas para cumplir el objetivo de la junta."),
     })
     return state
 
