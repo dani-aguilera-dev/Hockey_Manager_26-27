@@ -39,6 +39,15 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
         seed=seed if seed is not None else random.randint(1, 999_999),
         round=1, date=fixtures[0].date, fixtures=fixtures, teams=teams,
     )
+    # La 1ª Andaluza no se simula: sus jugadores pasan al mercado como agentes libres.
+    state.free_agents = []
+    for tid, t in list(state.teams.items()):
+        if t.league == "1A":
+            for p in t.players:
+                p.team_name = "Agente libre"
+                p.salary = max(p.salary, int(max(6000, (p.overall - 45) * 1400)))
+                state.free_agents.append(p)
+            del state.teams[tid]
     # pequeña pretemporada: moral y forma iniciales razonables
     for t in state.teams.values():
         if t.league == "DHA":
@@ -302,6 +311,7 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
+    _maybe_setup_dhb_phase2(state)
     if state.round <= state.total_rounds:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
         if next_fx:
@@ -426,6 +436,7 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     apply_round_finances(state)
     _reset_week_training(state)
     state.round += 1
+    _maybe_setup_dhb_phase2(state)
     if state.round <= state.total_rounds:
         next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
         if next_fx:
@@ -433,6 +444,11 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     else:
         finish_regular_season(state)
     return user_payload
+
+
+def _maybe_setup_dhb_phase2(state: GameState) -> None:
+    if state.competition == "DHB" and state.dhb_phase == 1 and state.round == 15:
+        setup_dhb_phase2(state)
 
 
 def _update_user_after_match(state: GameState, fixture: Fixture, result: MatchResult) -> None:
@@ -567,6 +583,135 @@ def simulate_cup_remaining(state: GameState) -> None:
             break
 
 
+def _dhb_groups_by_strength(state: GameState) -> dict[str, list[str]]:
+    teams = sorted([t for t in state.teams.values() if t.league == "DHB"], key=lambda t: sum(t.lineup_strength(t.auto_lineup()[0])), reverse=True)
+    groups = {"A": [], "B": []}
+    for i, t in enumerate(teams):
+        groups["A" if i % 2 == 0 else "B"].append(t.id)
+    return groups
+
+
+def _dhb_group_table(state: GameState, group: str) -> list[TeamState]:
+    ids = set(state.dhb_groups.get(group, []))
+    teams = [t for t in state.teams.values() if t.id in ids]
+    return sorted(teams, key=lambda t: (-t.points, -(t.goals_for - t.goals_against), -t.goals_for, t.name))
+
+
+def setup_dhb_phase1(state: GameState, start: str) -> None:
+    groups = _dhb_groups_by_strength(state)
+    state.dhb_phase = 1
+    state.dhb_groups = groups
+    state.dhb_group = next((g for g, ids in groups.items() if state.club_id in ids), "A")
+    fixtures: list[Fixture] = []
+    for g, ids in groups.items():
+        for f in create_fixtures(ids, start):
+            f.id = f"D{g}-{f.id}"
+            fixtures.append(f)
+    state.fixtures = sorted(fixtures, key=lambda f: (f.round, f.date, f.id))
+    state.round = 1
+    state.date = state.fixtures[0].date if state.fixtures else start
+
+
+def setup_dhb_phase2(state: GameState) -> None:
+    a = _dhb_group_table(state, "A")
+    b = _dhb_group_table(state, "B")
+    group_a = [t.id for t in a[:4]] + [t.id for t in b[:4]]
+    group_b = [t.id for t in a[4:]] + [t.id for t in b[4:]]
+    last_date = max((date.fromisoformat(f.date) for f in state.fixtures if f.phase == "regular"), default=date.fromisoformat(state.date))
+    start = (last_date + timedelta(days=7)).isoformat()
+    fixtures: list[Fixture] = []
+    for g, ids in (("A", group_a), ("B", group_b)):
+        for f in create_fixtures(ids, start, double=False):
+            f.id = f"P{g}-{f.id}"
+            f.round += 14
+            fixtures.append(f)
+    state.fixtures.extend(fixtures)
+    state.fixtures.sort(key=lambda f: (f.round, f.date, f.id))
+    state.dhb_phase = 2
+    state.dhb_groups = {"A": group_a, "B": group_b}
+    state.dhb_group = next((g for g, ids in state.dhb_groups.items() if state.club_id in ids), "A")
+
+
+def _fast_group_rows(state: GameState, ids: list[str], start: str, double: bool, rng: random.Random) -> dict[str, dict]:
+    fixtures = create_fixtures(ids, start, double=double)
+    rows = {tid: {"team": state.teams[tid], "points": 0, "gf": 0, "ga": 0} for tid in ids}
+    for fx in fixtures:
+        h, a = rows[fx.home_id], rows[fx.away_id]
+        hl, _ = h["team"].auto_lineup()
+        al, _ = a["team"].auto_lineup()
+        ha, hd = h["team"].lineup_strength(hl)
+        aa, ad = a["team"].lineup_strength(al)
+        hg = max(0, int(rng.gauss(2.4 + (ha + 4 - ad) / 14, 1.4)))
+        ag = max(0, int(rng.gauss(2.2 + (aa - hd) / 14, 1.4)))
+        h["gf"] += hg; h["ga"] += ag; a["gf"] += ag; a["ga"] += hg
+        if hg > ag:
+            h["points"] += 3
+        elif ag > hg:
+            a["points"] += 3
+        else:
+            h["points"] += 1; a["points"] += 1
+    return rows
+
+
+def _background_dhb_table(state: GameState) -> list[dict]:
+    teams = [t for t in state.teams.values() if t.league == "DHB"]
+    if len(teams) < 8:
+        return []
+    groups = _dhb_groups_by_strength(state)
+    rng = random.Random(state.seed + 707 + int(state.season[:4]))
+    start = state.date
+    rows_a = _fast_group_rows(state, groups["A"], start, True, rng)
+    rows_b = _fast_group_rows(state, groups["B"], start, True, rng)
+    def top(rows):
+        return sorted(rows.values(), key=lambda r: (-r["points"], -(r["gf"] - r["ga"]), -r["gf"]))[:4]
+    group_a = [r["team"].id for r in top(rows_a)] + [r["team"].id for r in top(rows_b)]
+    phase1_points = {tid: r["points"] for tid, r in {**rows_a, **rows_b}.items()}
+    phase1_gf = {tid: r["gf"] for tid, r in {**rows_a, **rows_b}.items()}
+    phase1_ga = {tid: r["ga"] for tid, r in {**rows_a, **rows_b}.items()}
+    last_start = (date.fromisoformat(state.fixtures[0].date) + timedelta(days=98)).isoformat()
+    rows2 = _fast_group_rows(state, group_a, last_start, False, rng)
+    for tid, r in rows2.items():
+        r["points"] += phase1_points.get(tid, 0)
+        r["gf"] += phase1_gf.get(tid, 0)
+        r["ga"] += phase1_ga.get(tid, 0)
+    return sorted(rows2.values(), key=lambda r: (-r["points"], -(r["gf"] - r["ga"]), -r["gf"], r["team"].name))
+
+
+def _simulate_dhb_final4(state: GameState, user_lineup_ids: list[str] | None = None) -> str | None:
+    table = _dhb_group_table(state, "A")
+    if len(table) < 4:
+        return None
+    semis = [(table[0], table[3]), (table[1], table[2])]
+    winners = []
+    results = []
+    for i, (a, b) in enumerate(semis, 1):
+        fx = Fixture(id=f"DHB-SF{i}", round=200 + i, date="2027-04-10", home_id=a.id, away_id=b.id, phase="dhb_sf")
+        rng = random.Random(state.seed + 1700 + i)
+        ids = user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)
+        line, bench = make_lineup(state.user_team, ids) if state.club_id in (a.id, b.id) else (None, None)
+        res = _simulate_fixture(state, fx, rng, user_lineup=line, user_bench=bench, neutral=True, knockout=True)
+        state.fixtures.append(fx)
+        win = res.shootout.get("winner_id") if res.shootout else (a.id if res.home_goals > res.away_goals else b.id)
+        winners.append(state.teams[win])
+        results.append((fx, res, win))
+    final = Fixture(id="DHB-F", round=204, date="2027-04-11", home_id=winners[0].id, away_id=winners[1].id, phase="dhb_final")
+    rng = random.Random(state.seed + 1800)
+    ids = user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)
+    line, bench = make_lineup(state.user_team, ids) if state.club_id in (winners[0].id, winners[1].id) else (None, None)
+    res = _simulate_fixture(state, final, rng, user_lineup=line, user_bench=bench, neutral=True, knockout=True)
+    state.fixtures.append(final)
+    champion = res.shootout.get("winner_id") if res.shootout else (winners[0].id if res.home_goals > res.away_goals else winners[1].id)
+    state.final4 = {
+        "semifinals": [{"home_id": fx.home_id, "away_id": fx.away_id, "home_goals": r.home_goals,
+                        "away_goals": r.away_goals, "shootout": r.shootout, "winner_id": w}
+                       for fx, r, w in results],
+        "final": {"home_id": final.home_id, "away_id": final.away_id, "home_goals": res.home_goals,
+                  "away_goals": res.away_goals, "shootout": res.shootout, "winner_id": champion},
+        "champion_id": champion,
+    }
+    return champion
+
+
 def play_final_four(state: GameState, user_lineup_ids: list[str] | None = None) -> dict:
     """Simula semifinales, final y playout de DHA."""
     table = league_table(state.teams, "DHA")
@@ -656,7 +801,7 @@ def _board_target(team: TeamState, competition: str) -> int:
 
 
 def _board_review(state: GameState) -> dict:
-    table = league_table(state.teams, state.competition)
+    table = state.table()
     pos = next((i for i, t in enumerate(table, 1) if t.id == state.club_id), len(table))
     target = _board_target(state.user_team, state.competition)
     met = pos <= target
@@ -691,7 +836,7 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
     if state.competition == "DHA":
         play_final_four(state, user_lineup_ids)
         table = league_table(state.teams, "DHA")
-        dhb_rows = _background_table(state, "DHB")
+        dhb_rows = _background_dhb_table(state)
         p = state.playout or {}
         if p.get("promoted_id"):
             # El playout lo gana un equipo DHB: sube el campeón DHB y el ganador del playout.
@@ -711,11 +856,11 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
         state.promoted_ids = list(dict.fromkeys(promoted))
         state.relegated_ids = list(dict.fromkeys(relegated))
     else:
-        table = league_table(state.teams, state.competition)
+        _simulate_dhb_final4(state, user_lineup_ids)
+        table_a = _dhb_group_table(state, "A")
         dha_rows = _background_table(state, "DHA")
-        state.promoted_ids = [t.id for t in table[:2]]
+        state.promoted_ids = [t.id for t in table_a[:2]]
         state.relegated_ids = [r["team"].id for r in dha_rows[-2:]]
-        state.final4 = {}
         state.playout = {}
     state.phase = "season_end"
     state.date = f"{int(state.season[:4]) + 1}-06-30"
@@ -730,7 +875,7 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
 
 
 def season_summary(state: GameState) -> dict:
-    table = league_table(state.teams, state.competition)
+    table = state.table() if state.competition == "DHB" else league_table(state.teams, state.competition)
     scorers = []
     for t in state.teams.values():
         if t.league == state.competition:
@@ -738,15 +883,15 @@ def season_summary(state: GameState) -> dict:
                 if p.season_goals:
                     scorers.append({"player": p.name, "team": t.name, "goals": p.season_goals, "assists": p.season_assists})
     scorers.sort(key=lambda x: (-x["goals"], -x["assists"], x["player"]))
-    if state.competition == "DHA":
-        champion_id = state.final4.get("champion_id")
-    else:
-        champion_id = table[0].id if table else None
+    champion_id = state.final4.get("champion_id")
+    if not champion_id and table:
+        champion_id = table[0].id
     promoted_names = [state.teams[i].name for i in state.promoted_ids if i in state.teams]
     relegated_names = [state.teams[i].name for i in state.relegated_ids if i in state.teams]
     return {
         "season": state.season,
         "competition": state.competition,
+        "group": state.dhb_group if state.competition == "DHB" else "A",
         "champion": state.teams[champion_id].name if champion_id in state.teams else None,
         "user_club": state.user_team.name,
         "user_position": next((i for i, t in enumerate(table, 1) if t.id == state.club_id), None),
@@ -813,14 +958,21 @@ def advance_to_next_season(state: GameState) -> None:
         team.last_lineup = []
         team.cohesion = 12
     state.competition = state.user_team.league
-    ids = sorted(t.id for t in state.teams.values() if t.league == state.competition)
     start = date.fromisoformat(state.fixtures[0].date) + timedelta(days=364)
-    fixtures = create_fixtures(ids, start.isoformat())
     state.season = f"{new_year}-{str(new_year + 1)[-2:]}"
-    state.fixtures = fixtures
-    state.round = 1
-    state.date = fixtures[0].date
     state.phase = "regular"
+    if state.competition == "DHB":
+        state.dhb_groups = {}
+        setup_dhb_phase1(state, start.isoformat())
+    else:
+        ids = sorted(t.id for t in state.teams.values() if t.league == "DHA")
+        fixtures = create_fixtures(ids, start.isoformat())
+        state.fixtures = fixtures
+        state.round = 1
+        state.date = fixtures[0].date
+        state.dhb_phase = 1
+        state.dhb_groups = {}
+        state.dhb_group = "A"
     state.final4 = {}
     state.playout = {}
     state.last_result = {}

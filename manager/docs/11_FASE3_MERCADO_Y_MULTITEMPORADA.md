@@ -99,8 +99,8 @@ Al terminar la temporada puedes pulsar `[C]` para continuar.
 ### DHA y DHB
 
 - **DHA:** 12 equipos, 22 jornadas, Final Four y playout.
-- **DHB:** 16 equipos, 30 jornadas, ascenso directo a los dos primeros.
-- La DHB se ha simplificado a una liga regular de 16 equipos; no se reproduce la fase de grupos real.
+- **DHB:** 16 equipos, dos grupos de 8, segunda fase y 21 jornadas totales.
+- La DHB se juega con formato de dos fases; la 1ª Andaluza no se simula.
 - Si tu club desciende, la siguiente temporada se juega en DHB y puedes intentar volver a DHA.
 
 ### Ascensos y descensos
@@ -129,7 +129,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado actual: **40 tests superados**.
+Resultado actual: **42 tests superados**.
 
 ---
 

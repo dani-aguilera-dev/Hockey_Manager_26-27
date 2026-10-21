@@ -121,6 +121,10 @@ Añade:
 - La cantera produce jugadores.
 - El mercado no se rompe en 10 temporadas.
 
+### Fase 5 — Mundo completo
+
+**Estado parcial:** Fase 5A iniciada (2026-10-21): DHB real de dos fases y agentes libres de 1ª Andaluza. Ver `13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`. Quedan Copa a doble partido y EHL.
+
 ### Fase 4 — Profundidad y pulido
 
 **Estado:** implementada parcialmente (2026-10-20). Copa, cantera, prensa y junta dinámica ya están en el juego. Ver `12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`.

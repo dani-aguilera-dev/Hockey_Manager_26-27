@@ -72,3 +72,39 @@ def test_multi_season_transition():
     assert len(regular) == (132 if state.competition == "DHA" else 240)
     assert state.total_rounds == (22 if state.competition == "DHA" else 30)
     assert all(len(t.players) >= 18 for t in state.teams.values() if t.league in ("DHA", "DHB"))
+
+
+def test_free_agents_from_primera_andaluza():
+    state = new_game("cd-terrassa", "Test", seed=506)
+    assert state.free_agents
+    assert all(p.team_name == "Agente libre" for p in state.free_agents)
+    assert all(t.league != "1A" for t in state.teams.values())
+    state.user_team.transfer_budget = 100000
+    free = None
+    result = {"ok": False}
+    for candidate in state.free_agents[:15]:
+        result = make_transfer_offer(state, candidate.id, 0, max(20000, candidate.salary * 3), 3)
+        if result["ok"]:
+            free = candidate
+            break
+    assert result["ok"]
+    assert any(p.id == free.id for p in state.user_team.players)
+    assert not any(p.id == free.id for p in state.free_agents)
+
+
+def test_dhb_two_phase_setup():
+    from src.season import setup_dhb_phase1, setup_dhb_phase2
+    state = new_game("cd-terrassa", "Test", seed=507)
+    state.competition = "DHB"
+    setup_dhb_phase1(state, "2026-09-20")
+    assert state.dhb_phase == 1
+    assert sorted(len(v) for v in state.dhb_groups.values()) == [8, 8]
+    regular = [f for f in state.fixtures if f.phase == "regular"]
+    assert len(regular) == 112
+    assert max(f.round for f in regular) == 14
+    setup_dhb_phase2(state)
+    assert state.dhb_phase == 2
+    assert sorted(len(v) for v in state.dhb_groups.values()) == [8, 8]
+    regular = [f for f in state.fixtures if f.phase == "regular"]
+    assert len(regular) == 168
+    assert max(f.round for f in regular) == 21

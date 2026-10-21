@@ -52,6 +52,7 @@ La Fase 1 incluye:
 - **mercado y contratos**: ventanas de verano/invierno, ofertas, renovaciones, contratación de staff y mercado IA;
 - **multi-temporada**: ascensos, descensos, DHA/DHB, contratos, canteranos y nueva temporada;
 - **Copa del Rey**, cantera, rueda de prensa y junta directiva dinámica;
+- **DHB real de dos fases** y **agentes libres** procedentes de 1ª Andaluza;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite.
@@ -118,6 +119,7 @@ manager/
 11. [`docs/10_STAFF_Y_FINANZAS.md`](docs/10_STAFF_Y_FINANZAS.md) — staff, junta directiva, salarios y finanzas.
 12. [`docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`](docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md) — mercado, contratos, staff y multi-temporada.
 13. [`docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
+14. [`docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`](docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md) — DHB de dos fases y agentes libres.
 
 ## Datos
 

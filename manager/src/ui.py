@@ -279,7 +279,8 @@ class GameUI:
     def print_dashboard(self):
         s = self.state
         t = s.user_team
-        header(f"DASHBOARD · {fmt_date(s.date)} · {t.name.upper()} · {s.competition}")
+        comp_label = f"{s.competition} · Grupo {s.dhb_group}" if s.competition == "DHB" else s.competition
+        header(f"DASHBOARD · {fmt_date(s.date)} · {t.name.upper()} · {comp_label}")
         fx = s.next_user_fixture()
         if fx:
             home = s.teams[fx.home_id]
@@ -470,7 +471,8 @@ class GameUI:
         s = self.state
         t = s.user_team
         header(f"CALENDARIO Y CLASIFICACIÓN · {t.name.upper()}")
-        section(f"CLASIFICACIÓN {s.competition}")
+        comp_label = f"{s.competition} · Grupo {s.dhb_group}" if s.competition == "DHB" else s.competition
+        section(f"CLASIFICACIÓN {comp_label}")
         table = s.table()
         print(f"{'#':>3}  {'Equipo':<38} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         line()
@@ -653,7 +655,7 @@ class GameUI:
         line()
         scout = t.staff_rating("scout")
         for i, p in enumerate(players, 1):
-            club = next((x.name for x in s.teams.values() if any(y.id == p.id for y in x.players)), "—")
+            club = "Agente libre" if any(y.id == p.id for y in s.free_agents) else next((x.name for x in s.teams.values() if any(y.id == p.id for y in x.players)), "—")
             print(f"{i:>3}  {short(p.name,30):<30} {short(club,26):<26} {p.subposition:<9} {p.age:>4} {scout_range(p, scout):>7} {money(asking_price(p)):>10} {money(p.salary):>9}")
         raw = ask("\nNúmero para ver informe (Enter = volver): ")
         if raw.isdigit() and 1 <= int(raw) <= len(players):
@@ -662,7 +664,7 @@ class GameUI:
     def market_player_detail(self, player):
         s = self.state
         t = s.user_team
-        club = next((x.name for x in s.teams.values() if any(y.id == player.id for y in x.players)), "—")
+        club = "Agente libre" if any(y.id == player.id for y in s.free_agents) else next((x.name for x in s.teams.values() if any(y.id == player.id for y in x.players)), "—")
         scout = t.staff_rating("scout")
         header(f"INFORME DE OJEADOR · {player.name.upper()}")
         print(f"{player.subposition} · {player.age} años · {club}")
@@ -1293,7 +1295,8 @@ class GameUI:
             print(f"  Objetivo: {br.get('target')}º · Posición: {br.get('position')}º · {'Cumplido' if br.get('met') else 'No cumplido'}")
             print(f"  Confianza: {br.get('confidence_before')} → {br.get('confidence_after')}/100 · Presupuesto de fichajes: {money(br.get('transfer_budget_after', 0))}")
             print(f"  {br.get('message', '')}")
-        section("CLASIFICACIÓN FINAL")
+        group_txt = f" · Grupo {summ.get('group')}" if summ.get('competition') == "DHB" else ""
+        section(f"CLASIFICACIÓN FINAL{group_txt}")
         print(f"{'#':>3}  {'Equipo':<40} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>3} {'GC':>3} {'DG':>4} {'PTS':>4}")
         for row in summ.get("table", []):
             print(f"{row['position']:>3}  {short(row['team'],40):<40} {row['played']:>3} {row['won']:>3} {row['drawn']:>3} {row['lost']:>3} {row['gf']:>3} {row['ga']:>3} {row['gd']:>+4} {row['points']:>4}")

@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-10-21 — Fase 5A: DHB real y agentes libres
+
+### Añadido
+
+- DHB con formato de dos fases:
+  - dos grupos de 8 en la primera fase;
+  - 14 jornadas por grupo;
+  - Grupo A y Grupo B en la segunda fase;
+  - 7 jornadas de segunda fase y 21 totales;
+  - Final Four del Grupo A;
+  - ascenso de los dos primeros del Grupo A.
+- Agentes libres:
+  - todos los jugadores de 1ª Andaluza pasan al mercado;
+  - el club de 1ª Andaluza desaparece del mundo simulado;
+  - fichaje sin traspaso, solo salario y contrato.
+- Simulación de fondo de DHA/DHB para ascensos y descensos.
+- `manager/docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`.
+- Tests de agentes libres y fases DHB.
+
+### Cambiado
+
+- La liga DHB ya no es una única tabla de 16 equipos.
+- La clasificación muestra el grupo del usuario cuando juega en DHB.
+- El calendario admite ligas de ida o ida/vuelta.
+- Tests ampliados a 42.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 42 tests superados.
+
+---
+
 ## 2026-10-20 — Fase 4: Copa, cantera, prensa y junta dinámica
 
 ### Añadido

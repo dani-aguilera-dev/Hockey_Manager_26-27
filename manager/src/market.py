@@ -57,6 +57,7 @@ def market_players(state: GameState, limit: int = 40, max_value: int | None = No
                    position: str | None = None) -> list[PlayerState]:
     pool = [p for t in state.teams.values() if t.league in ("DHA", "DHB")
             for p in t.players if t.id != state.club_id and p.age <= 34]
+    pool += [p for p in state.free_agents if p.age <= 34]
     if max_value is not None:
         pool = [p for p in pool if p.value <= max_value]
     if position:
@@ -66,7 +67,7 @@ def market_players(state: GameState, limit: int = 40, max_value: int | None = No
 
 
 def asking_price(player: PlayerState) -> int:
-    return _club_value(player)
+    return 0 if player.team_name == "Agente libre" else _club_value(player)
 
 
 def scout_range(player: PlayerState, scout_rating: int) -> str:
@@ -98,25 +99,32 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
                 break
         if player:
             break
-    if not player or not seller:
+    free_agent = False
+    if not player:
+        player = next((p for p in state.free_agents if p.id == player_id), None)
+        free_agent = player is not None
+    if not player:
         return {"ok": False, "message": "Jugador no encontrado."}
-    if seller.id == buyer.id:
+    if seller and seller.id == buyer.id:
         return {"ok": False, "message": "Ese jugador ya es tuyo."}
-    if len(seller.players) <= 16:
+    if seller and len(seller.players) <= 16:
         return {"ok": False, "message": f"{seller.name} no quiere quedarse sin efectivos."}
     if fee < 0 or salary <= 0 or years < 1:
         return {"ok": False, "message": "Oferta no válida."}
     if fee > buyer.transfer_budget:
         return {"ok": False, "message": f"No tienes presupuesto de fichajes suficiente ({fee:,} €).".replace(",", ".")}
-    value = _club_value(player)
-    key_threshold = sorted(seller.players, key=lambda p: p.overall, reverse=True)[:3]
-    key = player in key_threshold
-    seller_prob = 0.35 + (fee / max(1, value) - 1.0) * 0.85 - (0.22 if key else 0.0)
-    seller_prob += (buyer.manager_rating - 50) / 250
-    seller_prob = max(0.04, min(0.95, seller_prob))
     rng = rng or _rng(state, zlib.crc32(player_id.encode("utf-8")) % 1000)
-    if rng.random() > seller_prob:
-        return {"ok": False, "message": f"{seller.name} rechaza la oferta por {player.name}. Pide más dinero."}
+    if not free_agent:
+        value = _club_value(player)
+        key_threshold = sorted(seller.players, key=lambda p: p.overall, reverse=True)[:3]
+        key = player in key_threshold
+        seller_prob = 0.35 + (fee / max(1, value) - 1.0) * 0.85 - (0.22 if key else 0.0)
+        seller_prob += (buyer.manager_rating - 50) / 250
+        seller_prob = max(0.04, min(0.95, seller_prob))
+        if rng.random() > seller_prob:
+            return {"ok": False, "message": f"{seller.name} rechaza la oferta por {player.name}. Pide más dinero."}
+    else:
+        fee = 0
     raise_ratio = (salary - player.salary) / max(10000, player.salary)
     player_prob = 0.20 + raise_ratio * 0.55 + (buyer.manager_rating - 50) / 220
     if years >= 3:
@@ -126,8 +134,11 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
     player_prob = max(0.08, min(0.95, player_prob))
     if rng.random() > player_prob:
         return {"ok": False, "message": f"{player.name} rechaza el contrato. Quiere un salario mayor o más años."}
-    # traspaso
-    seller.players.remove(player)
+    # traspaso / firma de agente libre
+    if free_agent:
+        state.free_agents = [p for p in state.free_agents if p.id != player.id]
+    else:
+        seller.players.remove(player)
     buyer.players.append(player)
     player.team_name = buyer.name
     player.salary = int(salary)
@@ -138,13 +149,15 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
     player.injury = 0
     player.suspension = 0
     buyer.transfer_budget -= int(fee)
-    seller.budget += int(fee)
+    if seller:
+        seller.budget += int(fee)
     entry = {
         "type": "transferencia", "round": state.round, "player": player.name,
-        "from": seller.name, "to": buyer.name, "fee": int(fee), "salary": int(salary),
+        "from": seller.name if seller else "Agente libre", "to": buyer.name, "fee": int(fee), "salary": int(salary),
     }
     state.market_history.append(entry)
-    return {"ok": True, "message": f"Fichado {player.name} de {seller.name} por {fee:,} €.".replace(",", "."), "player": player, "entry": entry}
+    origin = seller.name if seller else "agente libre"
+    return {"ok": True, "message": f"Fichado {player.name} ({origin}) por {fee:,} €.".replace(",", "."), "player": player, "entry": entry}
 
 
 def _ai_market_activity(state: GameState, rng: random.Random) -> None:

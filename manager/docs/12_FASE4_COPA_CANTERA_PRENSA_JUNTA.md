@@ -122,7 +122,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado actual: **40 tests superados**.
+Resultado actual: **42 tests superados**.
 
 ---
 
@@ -132,4 +132,4 @@ Resultado actual: **40 tests superados**.
 - La cantera no tiene ojeadores dedicados ni decisiones de formación individual.
 - La prensa es un cuestionario fijo, no un sistema de rumores.
 - La junta no destituye de forma interactiva; avisa del riesgo.
-- La DHB sigue siendo una liga simplificada.
+- La DHB no desciende a 1ª Andaluza porque esa liga no se simula.

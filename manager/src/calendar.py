@@ -22,14 +22,15 @@ def _round_robin(ids: list[str]) -> list[list[tuple[str, str]]]:
     return rounds
 
 
-def create_fixtures(team_ids: list[str], start: str = "2026-09-20") -> list[Fixture]:
+def create_fixtures(team_ids: list[str], start: str = "2026-09-20", double: bool = True) -> list[Fixture]:
     if len(team_ids) < 2 or len(team_ids) % 2:
         raise ValueError("La liga debe tener un número par de equipos")
     first = _round_robin(team_ids)
     second = [[(b, a) for a, b in rd] for rd in first]
+    rounds = first + (second if double else [])
     fixtures: list[Fixture] = []
     d0 = date.fromisoformat(start)
-    for i, rd in enumerate(first + second, 1):
+    for i, rd in enumerate(rounds, 1):
         d = d0 + timedelta(days=7 * (i - 1))
         for j, (h, a) in enumerate(rd):
             fixtures.append(Fixture(

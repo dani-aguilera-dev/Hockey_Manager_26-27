@@ -30,7 +30,7 @@
 - Guardar y cargar la partida en SQLite.
 - Al terminar la liga: Final Four, playout y resumen de temporada.
 
-La Fase 1 se centra en DHA. Los datos de DHB y 1ª Andaluza están cargados para el mundo y el playout, pero no se simulan sus ligas.
+La Fase 1 se centra en DHA. La DHB ya tiene liga propia de dos fases y puede jugarse si el club asciende o desciende. La 1ª Andaluza no se simula: sus jugadores pasan al mercado como agentes libres.
 
 ---
 
@@ -61,7 +61,7 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Resultado esperado: **40 tests superados**.
+Resultado esperado: **42 tests superados**.
 
 ---
 
@@ -226,7 +226,7 @@ Al terminar la jornada 22:
   - Si gana el 11º, mantiene la plaza.
   - Si pierde, desciende y asciende el representante DHB.
 - El 12º desciende directamente.
-- El representante DHB es una simplificación de modelo: en Fase 2 se simulará la DHB completa.
+- El representante DHB del playout se elige por potencial; la liga DHB completa ya se simula para ascensos y descensos.
 
 ---
 
@@ -257,12 +257,13 @@ python3 -m pytest src/tests -q
 
 ## 10. Limitaciones conocidas
 
-- Solo DHA; DHB y 1ª Andaluza no tienen liga simulada.
+- La 1ª Andaluza no se simula; sus jugadores son agentes libres.
+- La DHB sí se simula con dos fases, pero no tiene descenso a 1ª Andaluza.
 - Final Four y playout se simulan automáticamente; no tienen previa interactiva.
 - No se puede guardar la partida en mitad del partido.
 - El entrenamiento es semanal y grupal; no hay sesiones individuales, mercado, cantera, prensa ni multi-temporada.
 - El mercado no incluye cesiones, cláusulas, agentes ni primas por objetivos.
-- La DHB de multi-temporada es una liga simplificada de 16 equipos.
+- La DHB tiene dos fases reales, pero no desciende a 1ª Andaluza porque esa liga no se simula.
 - La Copa no tiene doble partido ni cabezas de serie.
 - La cantera y la prensa son sistemas simplificados.
 - Parte del staff y de la junta son nombres de modelo, no datos oficiales.
@@ -288,7 +289,7 @@ python3 -m pytest src/tests -q
 | Staff con efectos y junta directiva | Cumplido |
 | Finanzas de jornada y salarios | Cumplido |
 | Mercado, contratos y staff | Cumplido |
-| Multi-temporada DHA/DHB | Cumplido (DHB simplificada) |
+| Multi-temporada DHA/DHB | Cumplido (DHB de dos fases) |
 | Copa del Rey | Cumplido |
 | Cantera, prensa y junta dinámica | Cumplido |
 | Sin errores de consola | Cumplido en pruebas y simulación |
@@ -308,6 +309,6 @@ El detalle de controles, componentes de gestión y lectura táctica está en
 2. Moral y dinámica de grupo.
 3. Junta, objetivos y finanzas completas.
 4. Logística avanzada con decisiones de hotel/comida.
-5. Simulación de DHB para playout y ascensos reales.
+5. Copa a doble partido y EHL.
 6. Partidos interactivos de Final Four.
 7. Multi-temporada y mercado.

@@ -512,9 +512,17 @@ class GameState:
     press_done_round: int = 0
     press_history: list[dict[str, Any]] = field(default_factory=list)
     board_review: dict[str, Any] = field(default_factory=dict)
+    free_agents: list[PlayerState] = field(default_factory=list)
+    dhb_phase: int = 1
+    dhb_groups: dict[str, list[str]] = field(default_factory=dict)
+    dhb_group: str = "A"
 
     @property
     def total_rounds(self) -> int:
+        if self.competition == "DHA":
+            return 22
+        if self.competition == "DHB":
+            return 21
         n = len([t for t in self.teams.values() if t.league == self.competition])
         return max(2, 2 * (n - 1)) if n else 22
 
@@ -524,6 +532,9 @@ class GameState:
 
     def table(self) -> list[TeamState]:
         teams = [t for t in self.teams.values() if t.league == self.competition]
+        if self.competition == "DHB" and self.dhb_groups:
+            ids = set(self.dhb_groups.get(self.dhb_group, []))
+            teams = [t for t in teams if t.id in ids]
         return sorted(teams, key=lambda t: (-t.points, -(t.goals_for - t.goals_against), -t.goals_for, t.name))
 
     def user_position(self) -> int:
@@ -573,6 +584,10 @@ class GameState:
             "press_done_round": self.press_done_round,
             "press_history": self.press_history,
             "board_review": self.board_review,
+            "free_agents": [p.to_dict() for p in self.free_agents],
+            "dhb_phase": self.dhb_phase,
+            "dhb_groups": self.dhb_groups,
+            "dhb_group": self.dhb_group,
         }
 
     @classmethod
@@ -602,4 +617,8 @@ class GameState:
             press_done_round=d.get("press_done_round", 0),
             press_history=d.get("press_history", []),
             board_review=d.get("board_review", {}),
+            free_agents=[PlayerState.from_dict(p) for p in d.get("free_agents", [])],
+            dhb_phase=d.get("dhb_phase", 1),
+            dhb_groups=d.get("dhb_groups", {}),
+            dhb_group=d.get("dhb_group", "A"),
         )
