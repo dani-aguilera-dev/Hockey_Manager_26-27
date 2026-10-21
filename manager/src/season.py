@@ -59,6 +59,8 @@ def new_game(club_id: str, manager_name: str = "Entrenador", seed: int | None = 
     initial_youth(state.teams, state.seed)
     if league == "DHB":
         setup_dhb_phase1(state, START_DATE)
+    first_regular = next((f.date for f in state.fixtures if f.phase == "regular"), START_DATE)
+    state.date = (date.fromisoformat(first_regular) - timedelta(days=50)).isoformat()
     state.inbox.append({
         "date": "2026-08-01", "from": "Junta Directiva",
         "subject": f"Bienvenido al {state.user_team.name}",
@@ -317,9 +319,8 @@ def play_round(state: GameState, user_lineup_ids: list[str] | None = None,
     _maybe_setup_dhb_phase2(state)
     _maybe_create_cup(state)
     if state.round <= state.total_rounds:
-        next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
-        if next_fx:
-            state.date = next_fx.date
+        if user_fixture:
+            state.date = (date.fromisoformat(user_fixture.date) + timedelta(days=1)).isoformat()
     else:
         finish_regular_season(state)
     return user_payload
@@ -443,9 +444,8 @@ def finish_live_round(state: GameState, ctx: LiveRoundContext) -> dict:
     _maybe_setup_dhb_phase2(state)
     _maybe_create_cup(state)
     if state.round <= state.total_rounds:
-        next_fx = next((f for f in state.fixtures if f.phase == "regular" and f.round == state.round), None)
-        if next_fx:
-            state.date = next_fx.date
+        if fixture:
+            state.date = (date.fromisoformat(fixture.date) + timedelta(days=1)).isoformat()
     else:
         finish_regular_season(state)
     return user_payload
@@ -916,6 +916,26 @@ def _process_age_and_retirements(state: GameState) -> None:
     state.free_agents = kept_free
 
 
+def record_season_career(state: GameState) -> None:
+    """Guarda una foto de la temporada en el histórico de cada jugador."""
+    for team in state.teams.values():
+        if team.league not in ("DHA", "DHB"):
+            continue
+        for player in team.players:
+            if not (player.apps or player.season_goals or player.season_assists):
+                continue
+            entry = {
+                "season": state.season, "club": team.name, "league": team.league,
+                "apps": player.apps, "goals": player.season_goals,
+                "assists": player.season_assists, "rating": round(player.rating, 2),
+                "overall": round(player.overall, 1),
+            }
+            player.career = [e for e in player.career
+                             if not (e.get("season") == state.season and e.get("club") == team.name)]
+            player.career.append(entry)
+            player.career = player.career[-30:]
+
+
 def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = None) -> None:
     if state.competition == "DHA" and not state.cup_active and not state.cup_winner_id:
         new_cup(state)
@@ -952,6 +972,7 @@ def finish_regular_season(state: GameState, user_lineup_ids: list[str] | None = 
         state.playout = {}
     create_ehl(state)
     simulate_ehl(state)
+    record_season_career(state)
     _process_age_and_retirements(state)
     state.phase = "season_end"
     state.date = f"{int(state.season[:4]) + 1}-06-30"
@@ -1061,12 +1082,13 @@ def advance_to_next_season(state: GameState) -> None:
     if state.competition == "DHB":
         state.dhb_groups = {}
         setup_dhb_phase1(state, start.isoformat())
+        state.date = (date.fromisoformat(state.fixtures[0].date) - timedelta(days=50)).isoformat()
     else:
         ids = sorted(t.id for t in state.teams.values() if t.league == "DHA")
         fixtures = create_fixtures(ids, start.isoformat())
         state.fixtures = fixtures
         state.round = 1
-        state.date = fixtures[0].date
+        state.date = (date.fromisoformat(fixtures[0].date) - timedelta(days=50)).isoformat()
         state.dhb_phase = 1
         state.dhb_groups = {}
         state.dhb_group = "A"

@@ -31,11 +31,12 @@ STAFF_NAMES = [
 def market_window(state: GameState) -> str:
     if state.phase != "regular":
         return "cerrado"
-    played = any(f.phase == "regular" and f.played for f in state.fixtures)
-    if state.round == 1 and not played:
+    from datetime import date
+    today = date.fromisoformat(state.date)
+    year = int(state.season[:4])
+    if date(year, 8, 1) <= today <= date(year, 9, 30):
         return "verano"
-    round_fixtures = [f for f in state.fixtures if f.phase == "regular" and f.round == state.round]
-    if state.round == 12 and round_fixtures and not any(f.played for f in round_fixtures):
+    if date(year + 1, 1, 1) <= today <= date(year + 1, 1, 31):
         return "invierno"
     return "cerrado"
 
@@ -75,6 +76,21 @@ def scout_range(player: PlayerState, scout_rating: int) -> str:
     low = max(1, int(player.overall) - error)
     high = min(99, int(player.overall) + error)
     return f"{low}-{high}"
+
+
+def _record_partial_career(player: PlayerState, club: TeamState, state: GameState) -> None:
+    if not (player.apps or player.season_goals or player.season_assists):
+        return
+    entry = {
+        "season": state.season, "club": club.name, "league": club.league,
+        "apps": player.apps, "goals": player.season_goals,
+        "assists": player.season_assists, "rating": round(player.rating, 2),
+        "overall": round(player.overall, 1), "partial": True,
+    }
+    player.career = [e for e in player.career
+                     if not (e.get("season") == state.season and e.get("club") == club.name)]
+    player.career.append(entry)
+    player.career = player.career[-30:]
 
 
 def _contract_until(start_year: int, years: int) -> str:
@@ -148,6 +164,8 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
     player.team_name = buyer.name
     player.salary = int(salary)
     player.contract_until = _contract_until(int(state.season[:4]), years)
+    if seller:
+        _record_partial_career(player, seller, state)
     player.apps = player.season_goals = player.season_assists = 0
     player.rating_sum = 0.0
     player.fatigue = 0
@@ -188,6 +206,7 @@ def _ai_market_activity(state: GameState, rng: random.Random) -> None:
         player.team_name = buyer.name
         player.salary = salary
         player.contract_until = _contract_until(int(state.season[:4]), rng.randint(2, 4))
+        _record_partial_career(player, seller, state)
         buyer.transfer_budget -= fee
         seller.budget += fee
         player.apps = player.season_goals = player.season_assists = 0
@@ -205,10 +224,12 @@ def _ai_market_activity(state: GameState, rng: random.Random) -> None:
 def generate_incoming_offers(state: GameState, rng: random.Random | None = None) -> list[dict]:
     if market_window(state) == "cerrado":
         return state.transfer_offers
-    if state.market_offers_round == state.round and state.transfer_offers:
+    if (state.market_offers_round == state.round
+            and state.market_offers_date == state.date
+            and state.transfer_offers):
         return state.transfer_offers
     rng = rng or _rng(state, 7)
-    if state.market_offers_round != state.round:
+    if state.market_offers_round != state.round or state.market_offers_date != state.date:
         _ai_market_activity(state, rng)
     user = state.user_team
     candidates = [p for p in user.players if p.age <= 31 and p.perfil in ("Jugador", "Invitado")]
@@ -230,6 +251,7 @@ def generate_incoming_offers(state: GameState, rng: random.Random | None = None)
         })
     state.transfer_offers = offers
     state.market_offers_round = state.round
+    state.market_offers_date = state.date
     return offers
 
 

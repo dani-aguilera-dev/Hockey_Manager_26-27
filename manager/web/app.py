@@ -16,7 +16,8 @@ from flask import (Flask, abort, flash, redirect, render_template, request,
 
 from src.calendar import league_table
 from src.cup import cup_round_fixtures, cup_status_text, cup_next_user_fixture
-from src.data_loader import load_teams
+from src.daily import add_player_chat, next_match_date, simulate_days
+from src.data_loader import load_clubs, load_teams
 from src.finance import financial_summary
 from src.market import (STAFF_LABELS, accept_incoming_offer, asking_price,
                         fire_staff, generate_incoming_offers, hire_staff,
@@ -367,7 +368,105 @@ def dashboard():
     ctx["news"] = news_feed(state, 4)
     ctx["key_players"] = sorted(state.user_team.players, key=lambda p: p.overall, reverse=True)[:3]
     ctx["live_ctx"] = LIVE.get(session.get("game_id"))
+    ctx["daily_events"] = list(reversed(state.daily_events[-6:]))
+    ctx["pending_chats"] = [m for m in state.chat_messages if not m.get("answered")][-2:]
+    ctx["next_match_date"] = next_match_date(state)
     return render_template("dashboard.html", **ctx)
+
+
+@app.route("/simulate", methods=["POST"])
+@login_required
+def simulate_calendar():
+    state = get_state()
+    if session.get("game_id") in LIVE:
+        flash("Termina primero el partido en directo.", "warning")
+        return redirect(url_for("match_live"))
+    mode = request.form.get("mode", "day")
+    target = request.form.get("target_date", "").strip()
+    if mode == "next_match":
+        match_day = next_match_date(state)
+        if not match_day:
+            flash("No queda ningún partido pendiente.", "warning")
+            return redirect(url_for("dashboard"))
+        result = simulate_days(state, target_date=match_day, stop_at_match=True)
+    elif mode == "date":
+        if not target:
+            flash("Elige una fecha.", "warning")
+            return redirect(url_for("dashboard"))
+        try:
+            result = simulate_days(state, target_date=target, stop_at_match=True)
+        except ValueError:
+            flash("Fecha no válida.", "danger")
+            return redirect(url_for("dashboard"))
+    else:
+        result = simulate_days(state, days=1, stop_at_match=True)
+    if not result.get("ok"):
+        flash(result.get("message", "No se pudo avanzar."), "warning")
+        return redirect(url_for("dashboard"))
+    save_state(state)
+    if result.get("stopped_at_match"):
+        flash(f"Hoy hay partido: {state.date}. Prepara el once y decide cómo jugarlo.", "warning")
+        return redirect(url_for("match_page"))
+    flash(f"Calendario avanzado {result['days']} día(s). Hoy es {state.date}.", "success")
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/chat")
+@login_required
+def chat():
+    state = get_state()
+    ctx = state_context(state)
+    ctx["messages"] = list(reversed(state.chat_messages[-30:]))
+    ctx["players_by_id"] = {p.id: p for p in state.user_team.players}
+    return render_template("chat.html", **ctx)
+
+
+@app.route("/chat/<message_id>", methods=["POST"])
+@login_required
+def chat_answer(message_id):
+    state = get_state()
+    message = next((m for m in state.chat_messages if m.get("id") == message_id), None)
+    if not message or message.get("answered"):
+        flash("Esa conversación ya no está disponible.", "warning")
+        return redirect(url_for("chat"))
+    try:
+        choice = int(request.form.get("option", "0"))
+    except ValueError:
+        choice = 0
+    options = message.get("options", [])
+    if not options:
+        flash("La conversación no tiene opciones.", "danger")
+        return redirect(url_for("chat"))
+    option = options[max(0, min(choice, len(options) - 1))]
+    player = next((p for p in state.user_team.players if p.id == message.get("player_id")), None)
+    effects = option.get("effects", {})
+    if player:
+        if "morale" in effects:
+            player.morale = max(1, min(20, player.morale + int(effects["morale"])))
+        if "form" in effects:
+            player.form = max(1.0, min(10.0, player.form + float(effects["form"])))
+    if "cohesion" in effects:
+        state.user_team.cohesion = max(1, min(20, state.user_team.cohesion + int(effects["cohesion"])))
+    if "manager_rating" in effects:
+        state.user_team.manager_rating = max(0, min(100, state.user_team.manager_rating + int(effects["manager_rating"])))
+    message["answered"] = True
+    message["answer"] = option.get("label", "")
+    message["response"] = option.get("response", "")
+    save_state(state)
+    flash("Conversación registrada.", "success")
+    return redirect(url_for("chat"))
+
+
+@app.route("/chat/new", methods=["POST"])
+@login_required
+def chat_new():
+    state = get_state()
+    rng = random.Random(state.seed + len(state.chat_messages) * 31)
+    player = rng.choice(state.user_team.available_players or state.user_team.players)
+    add_player_chat(state, date.fromisoformat(state.date), player, kind="mood")
+    save_state(state)
+    flash("Has abierto una conversación con el vestuario.", "success")
+    return redirect(url_for("chat"))
 
 
 @app.route("/news")
@@ -376,6 +475,7 @@ def news():
     state = get_state()
     ctx = state_context(state)
     ctx["news"] = news_feed(state, 12)
+    ctx["daily_events"] = list(reversed(state.daily_events[-20:]))
     return render_template("news.html", **ctx)
 
 
@@ -397,13 +497,52 @@ def squad():
 @login_required
 def player_detail(player_id):
     state = get_state()
-    player = next((p for p in state.user_team.players if p.id == player_id), None)
+    owner_team = next((t for t in state.teams.values() if any(p.id == player_id for p in t.players)), None)
+    player = next((p for p in owner_team.players if p.id == player_id), None) if owner_team else None
+    if not player:
+        player = next((p for p in state.free_agents if p.id == player_id), None)
     if not player:
         flash("Jugador no encontrado.", "danger")
         return redirect(url_for("squad"))
     ctx = state_context(state)
     ctx["player"] = player
+    ctx["owner_team"] = owner_team
+    ctx["owner_name"] = owner_team.name if owner_team else "Agente libre"
+    ctx["back_url"] = url_for("team_detail", team_id=owner_team.id) if owner_team else url_for("market")
     return render_template("player.html", **ctx)
+
+
+@app.route("/team/<team_id>")
+@login_required
+def team_detail(team_id):
+    state = get_state()
+    selected = state.teams.get(team_id)
+    if not selected:
+        flash("Equipo no encontrado.", "danger")
+        return redirect(url_for("table"))
+    clubs, _ = load_clubs()
+    club = clubs.get(team_id, {})
+    if state.competition == selected.league:
+        table = state.table()
+    else:
+        table = sorted([t for t in state.teams.values() if t.league == selected.league],
+                       key=lambda t: (-t.points, -(t.goals_for - t.goals_against), -t.goals_for, t.name))
+    position = next((i for i, t in enumerate(table, 1) if t.id == selected.id), 0)
+    team_group = ""
+    if selected.league == "DHB" and state.dhb_groups:
+        team_group = next((g for g, ids in state.dhb_groups.items() if selected.id in ids), "")
+    fixtures = sorted([f for f in state.fixtures if selected.id in (f.home_id, f.away_id)],
+                      key=lambda f: (f.date, f.round))
+    played = [f for f in fixtures if f.played][-5:]
+    upcoming = [f for f in fixtures if not f.played][:5]
+    ctx = state_context(state)
+    ctx.update({
+        "selected_team": selected, "club": club, "team_position": position, "team_group": team_group,
+        "team_table": table, "team_fixtures": fixtures, "team_played": played,
+        "team_upcoming": upcoming,
+        "team_players": sorted(selected.players, key=lambda p: (p.position_group, -p.overall)),
+    })
+    return render_template("team.html", **ctx)
 
 
 @app.route("/tactics", methods=["GET", "POST"])
@@ -496,15 +635,20 @@ def _opponent(state):
 def market():
     state = get_state()
     ctx = state_context(state)
-    max_value = request.args.get("max_value", "").strip()
-    max_value = int(max_value) if max_value.isdigit() else max(100000, int(state.user_team.transfer_budget / 0.70))
+    raw_max = request.args.get("max_value", "").strip()
+    max_value = int(raw_max) if raw_max.isdigit() else None
     position = request.args.get("position", "")
+    club_id = request.args.get("club_id", "")
     query = request.args.get("q", "").strip()
-    players = market_players(state, limit=30, max_value=max_value, position=position or None)
+    players = market_players(state, limit=2000, max_value=max_value, position=position or None)
     owners = {p.id: t.name for t in state.teams.values() for p in t.players}
     owner_teams = {p.id: t for t in state.teams.values() for p in t.players}
     for p in state.free_agents:
         owners[p.id] = "Agente libre"
+    if club_id:
+        players = [p for p in players if owner_teams.get(p.id) and owner_teams[p.id].id == club_id]
+    else:
+        players = players[:200]
     if query:
         needle = query.lower()
         players = [
@@ -513,7 +657,8 @@ def market():
             or needle in p.archetype.lower()
             or needle in owners.get(p.id, "").lower()
         ]
-    ctx.update({"players": players, "max_value": max_value, "position": position, "query": query,
+    all_teams = sorted([t for t in state.teams.values() if t.league in ("DHA", "DHB")], key=lambda t: (t.league, t.name))
+    ctx.update({"players": players, "max_value": max_value, "position": position, "query": query, "club_id": club_id, "all_teams": all_teams,
                 "asking_price": asking_price, "scout_range": scout_range,
                 "window": market_window(state), "offers": state.transfer_offers,
                 "owners": owners, "owner_teams": owner_teams})
@@ -547,7 +692,8 @@ def market_player(player_id):
     owner_team = next((t for t in state.teams.values() if any(p.id == player.id for p in t.players)), None)
     owner = owner_team.name if owner_team else "Agente libre"
     ctx.update({"player": player, "owner": owner, "owner_team": owner_team, "asking": asking_price(player),
-                "scout": scout_range(player, state.user_team.staff_rating("scout"))})
+                "scout": scout_range(player, state.user_team.staff_rating("scout")),
+                "window": market_window(state)})
     return render_template("market_player.html", **ctx)
 
 

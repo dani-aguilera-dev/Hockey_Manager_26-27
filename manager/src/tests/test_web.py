@@ -93,6 +93,29 @@ def test_web_live_match(client):
     assert client.get("/match/report").status_code == 200
 
 
+def test_web_daily_calendar_teams_and_chat(client):
+    import web.app as web
+    _new(client, seed="17")
+    state = list(web.GAMES.values())[-1]
+    assert state.date == "2026-08-01"
+    r = client.post("/simulate", data={"mode": "day"}, follow_redirects=True)
+    assert r.status_code == 200
+    assert state.date != "2026-08-01"
+    assert client.get("/news").status_code == 200
+    assert client.get("/team/atletic-terrassa").status_code == 200
+    state.date = "2026-10-01"
+    market_html = client.get("/market").get_data(as_text=True)
+    assert "Mercado cerrado" in market_html
+    assert "jugadores encontrados" in market_html
+    other = next(p for t in state.teams.values() if t.id != state.club_id for p in t.players)
+    assert client.get("/player/" + other.id).status_code == 200
+    assert client.post("/chat/new", follow_redirects=True).status_code == 200
+    assert state.chat_messages
+    message = state.chat_messages[-1]
+    assert client.post("/chat/" + message["id"], data={"option": "0"}, follow_redirects=True).status_code == 200
+    assert message["answered"]
+
+
 def test_web_game_menu_options_and_exit(client):
     _new(client, seed="16")
     dashboard = client.get("/dashboard").get_data(as_text=True)

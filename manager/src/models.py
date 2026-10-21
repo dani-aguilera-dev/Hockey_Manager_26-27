@@ -130,6 +130,7 @@ class PlayerState:
     contract_until: str = "2028-06-30"
     photo: str = ""
     photo_remote: str = ""
+    career: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def youth_category(self) -> str:
@@ -523,6 +524,9 @@ class GameState:
     transfer_offers: list[dict[str, Any]] = field(default_factory=list)
     market_history: list[dict[str, Any]] = field(default_factory=list)
     market_offers_round: int = 0
+    market_offers_date: str = ""
+    daily_events: list[dict[str, Any]] = field(default_factory=list)
+    chat_messages: list[dict[str, Any]] = field(default_factory=list)
     promoted_ids: list[str] = field(default_factory=list)
     relegated_ids: list[str] = field(default_factory=list)
     cup_round: int = 0
@@ -598,6 +602,9 @@ class GameState:
             "transfer_offers": self.transfer_offers,
             "market_history": self.market_history,
             "market_offers_round": self.market_offers_round,
+            "market_offers_date": self.market_offers_date,
+            "daily_events": self.daily_events,
+            "chat_messages": self.chat_messages,
             "promoted_ids": self.promoted_ids,
             "relegated_ids": self.relegated_ids,
             "cup_round": self.cup_round,
@@ -635,6 +642,9 @@ class GameState:
             transfer_offers=d.get("transfer_offers", []),
             market_history=d.get("market_history", []),
             market_offers_round=d.get("market_offers_round", 0),
+            market_offers_date=d.get("market_offers_date", ""),
+            daily_events=d.get("daily_events", []),
+            chat_messages=d.get("chat_messages", []),
             promoted_ids=d.get("promoted_ids", []),
             relegated_ids=d.get("relegated_ids", []),
             cup_round=d.get("cup_round", 0), cup_active=d.get("cup_active", False),

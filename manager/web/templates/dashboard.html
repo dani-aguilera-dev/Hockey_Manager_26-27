@@ -14,6 +14,21 @@
   <a class="btn primary" href="{{ url_for('match_live') }}">Continuar partido</a>
 </div>
 {% endif %}
+<div class="card" style="margin-bottom:14px">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <div><h3 style="margin:0">Calendario</h3><p class="muted small">Hoy {{ state.date|fdate }} · Jornada {{ state.round }} · {{ state.competition }}</p></div>
+    {% if next_match_date %}<span class="badge {{ 'warn' if next_match_date.isoformat() == state.date else '' }}">Próximo partido: {{ next_match_date.isoformat()|fdate }}</span>{% endif %}
+  </div>
+  <form method="post" action="{{ url_for('simulate_calendar') }}" class="row" style="margin-top:10px">
+    <button class="btn primary" name="mode" value="day" type="submit">Avanzar 1 día</button>
+    <button class="btn blue" name="mode" value="next_match" type="submit">Hasta el próximo partido</button>
+    <span class="muted small">o</span>
+    <input type="date" name="target_date" value="{{ state.date }}" min="{{ state.date }}" aria-label="Fecha objetivo">
+    <button class="btn" name="mode" value="date" type="submit">Ir a la fecha</button>
+  </form>
+  <p class="small muted">La simulación se detiene antes de jugar el partido. No se salta ningún encuentro.</p>
+</div>
+
 <div class="grid grid-2">
   <div class="card">
     <h3>Próximo partido</h3>
@@ -24,8 +39,8 @@
         <div class="vs">VS</div>
         <div class="team right"><b>{{ away.name }}</b>{{ m.crest(away) }}</div>
       </div>
-      <p class="muted">Jornada {{ next_fixture.round }} · {{ next_fixture.date|fdate }} · {{ home.stadium_name }}</p>
-      <p>Posición: <b>{{ position }}º/{{ table|length }}</b> · {{ team.points }} pts · {{ team.played }} PJ · forma {{ state.last_result.result if state.last_result else '—' }}</p>
+      <p class="muted">Jornada {{ next_fixture.round }} · {{ next_fixture.date|fdate }} · {{ home.stadium_name }}{% if next_fixture.date == state.date %} · <span class="badge warn">Hoy hay partido</span>{% endif %}</p>
+      <p>{% if team.played %}Posición: <b>{{ position }}º/{{ table|length }}</b> · {{ team.points }} pts · {{ team.played }} PJ{% else %}<span class="badge">Pretemporada</span> · 0 PJ{% endif %} · forma {{ state.last_result.result if state.last_result else '—' }}</p>
       <div class="actions"><a class="btn primary" href="{{ url_for('match_page') }}">Previa y jugar</a><a class="btn" href="{{ url_for('training') }}">Entrenar</a><a class="btn" href="{{ url_for('tactics') }}">Táctica</a></div>
     {% else %}<p>No hay partido pendiente.</p><a class="btn primary" href="{{ url_for('season_end') }}">Ver fin de temporada</a>{% endif %}
   </div>
@@ -51,9 +66,20 @@
   </div>
   <div class="card"><h3>Jugadores clave</h3>{% for p in key_players %}<div style="margin-bottom:8px">{{ m.player_card(p, url_for('player_detail', player_id=p.id), compact=true) }}</div>{% endfor %}</div>
   <div class="card"><h3>Clasificación</h3><table><thead><tr><th>#</th><th>Equipo</th><th class="num">PTS</th><th class="num">DG</th></tr></thead><tbody>
-    {% for t in table[:8] %}<tr><td>{{ loop.index }}</td><td><img class="crest crest-sm" src="{{ crest_src(t) }}" alt=""> {{ t.name }}</td><td class="num">{{ t.points }}</td><td class="num">{{ t.goals_for - t.goals_against }}</td></tr>{% endfor %}
+    {% for t in table[:8] %}<tr><td>{{ loop.index }}</td><td><a href="{{ url_for('team_detail', team_id=t.id) }}"><img class="crest crest-sm" src="{{ crest_src(t) }}" alt=""> {{ t.name }}</a></td><td class="num">{{ t.points }}</td><td class="num">{{ t.goals_for - t.goals_against }}</td></tr>{% endfor %}
   </tbody></table><a href="{{ url_for('table') }}">Ver clasificación y calendario</a></div>
 </div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h3>Diario del club</h3>
+    {% for e in daily_events %}<div class="news-card"><div class="cat">{{ e.category }} · {{ e.date|fdate }}</div><h3>{{ e.headline }}</h3><p>{{ e.body }}</p></div>{% else %}<p class="muted">No hay novedades todavía. Avanza el calendario para vivir el día a día del club.</p>{% endfor %}
+    <a class="small" href="{{ url_for('news') }}">Ver todas las noticias</a>
+  </div>
+  <div class="card"><h3>Vestuario</h3>
+    {% for m in pending_chats %}<div class="news-card"><div class="cat">Conversación pendiente · {{ m.date|fdate }}</div><h3>{{ m.player_name }}</h3><p>{{ m.text }}</p><a class="btn small primary" href="{{ url_for('chat') }}">Responder</a></div>{% else %}<p class="muted">No hay conversaciones pendientes.</p>{% endfor %}
+    <div class="actions"><a class="btn" href="{{ url_for('chat') }}">Abrir vestuario</a></div>
+  </div>
+</div>
+
 <div class="grid grid-2" style="margin-top:14px">
   <div class="card"><h3>Accesos rápidos</h3><div class="actions"><a class="btn" href="{{ url_for('squad') }}">Plantilla</a><a class="btn" href="{{ url_for('market') }}">Mercado</a><a class="btn" href="{{ url_for('staff') }}">Staff</a><a class="btn" href="{{ url_for('youth') }}">Cantera</a><a class="btn" href="{{ url_for('press') }}">Prensa</a><a class="btn" href="{{ url_for('cup') }}">Copa</a></div></div>
   <div class="card"><h3>Inbox</h3>{% for msg in inbox %}<p class="small"><b>{{ msg.subject }}</b><br><span class="muted">{{ msg.from }} · {{ msg.date }}</span><br>{{ msg.body }}</p>{% else %}<p class="muted">Sin mensajes.</p>{% endfor %}</div>

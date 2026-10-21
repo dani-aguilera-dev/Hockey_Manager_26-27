@@ -33,6 +33,11 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 
 - Nueva partida con club DHA o DHB.
 - Carga y guardado de partidas en SQLite, con nombre de guardado amigable y menú de juego.
+- **Simulación diaria** con avance de 1 día, hasta una fecha o hasta el próximo partido.
+- **Diario del club** con entrenamientos, lesiones, mercado, noticias de DHA/DHB y conversaciones.
+- **Vestuario** con chat y respuestas que afectan a moral, forma o cohesión.
+- **Mercado abierto por fechas** (verano hasta el 30/09 e invierno en enero) y listado visible incluso cerrado.
+- **Perfiles de equipo** y **histórico de jugadores** por temporada.
 - **Menú de juego global** en todas las pantallas: continuar, guardar, cargar, volver, menú principal, nueva partida y salida con guardado automático.
 - **Opciones**: tamaño de texto normal/grande, modo compacto y confirmación al salir.
 - **Menú principal** con partida en curso, guardado rápido y partidas recientes.
@@ -45,12 +50,12 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - Táctica y once: pizarrón de slots con foto, posición, arquetipo, OVR y selector por puesto.
 - Mercado en fichas de jugador con foto, club, posición, arquetipo y escudo del propietario.
 - Entrenamiento semanal: automático, recuperación o plan editado.
-- Mercado: búsqueda, agentes libres, ofertas de traspaso, ofertas recibidas y renovaciones.
+- Mercado: búsqueda por jugador/club/posición/valor, agentes libres, ofertas, ofertas recibidas y renovaciones; siempre muestra jugadores del resto de clubes.
 - Staff: contratar y despedir; junta directiva.
 - Cantera: categorías Sub-16, Sub-18 y Sub-21; promover y liberar juveniles.
 - Prensa.
 - Copa del Rey de 8 equipos DHA.
-- Clasificación y calendario.
+- Clasificación y calendario con acceso al perfil de cada equipo.
 - Partido rápido.
 - Partido en directo: marcador con escudos, cuartos, momento a momento, estadísticas, cambios y táctica.
 - Fin de temporada y multi-temporada.
@@ -108,4 +113,4 @@ python3 -m pytest src/tests -q
 
 Incluye pruebas de rutas web, nueva partida, fotos, escudos, noticias, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **53 tests superados**.
+Resultado actual: **58 tests superados**.

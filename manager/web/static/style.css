@@ -262,3 +262,10 @@ body.text-large .small,body.text-large .meta,body.text-large .pc-meta,body.text-
 body.compact .card{padding:12px}
 body.compact .player-card,body.compact .slot-card{padding:8px}
 @media(max-width:700px){.game-menu-panel{width:100%;padding:16px}.save-chip{display:none}.menu-trigger{margin-left:auto}}
+/* Calendario diario, vestuario y perfiles de equipo */
+.option-card{color:var(--text);font:inherit;text-align:left;width:100%}
+.team-hero .hero-player{align-items:flex-start}
+.team-hero h1{margin:0}
+.daily-event{border-left:3px solid var(--accent2)}
+.chat-message{border-left:3px solid var(--warn)}
+.chat-message.answered{border-left-color:var(--line)}

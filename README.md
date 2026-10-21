@@ -67,6 +67,7 @@ El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Fo
 - [`manager/docs/15_WEB_ALPHA.md`](manager/docs/15_WEB_ALPHA.md) — alpha web.
 - [`manager/docs/16_DISENO_UI.md`](manager/docs/16_DISENO_UI.md) — diseño visual, paleta, escudos y usabilidad.
 - [`manager/docs/17_CANTERA_Y_CATEGORIAS.md`](manager/docs/17_CANTERA_Y_CATEGORIAS.md) — cantera Sub-16/Sub-18/Sub-21 y nombres por comunidad.
+- [`manager/docs/18_SIMULACION_DIARIA_Y_SCOUTING.md`](manager/docs/18_SIMULACION_DIARIA_Y_SCOUTING.md) — calendario diario, eventos, vestuario, mercado, equipos e histórico.
 
 ```bash
 cd manager && python3 run.py

@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-21 — Simulación diaria, vestuario, scouting y perfiles
+
+### Añadido
+
+- **Calendario diario** desde el 1 de agosto: avanzar 1 día, hasta una fecha o hasta el próximo partido.
+- La simulación **se detiene en el día del partido** y nunca lo juega automáticamente.
+- **Eventos diarios**: entrenamientos, lesiones, mercado, noticias de liga, noticias de DHB/DHA, club y afición.
+- **Diario del club** en dashboard y noticias.
+- **Vestuario**: conversaciones con jugadores, respuestas con efectos en moral, forma y cohesión.
+- **Mercado por fechas**: verano hasta el 30/09 e invierno del 1 al 31 de enero; el primer partido ya no lo cierra.
+- **Mercado siempre consultable**: muestra jugadores de todos los clubes y agentes libres aunque esté cerrado.
+- Filtro por club y estadísticas de temporada en las fichas de mercado.
+- **Perfil de equipo** con historia, estadio, instalaciones, clasificación, plantilla, resultados y próximos partidos.
+- **Histórico de jugadores** por temporada y club, conservado en traspasos y visible en la ficha.
+- Enlaces a perfiles desde la clasificación, el dashboard y el mercado.
+- Documento `manager/docs/18_SIMULACION_DIARIA_Y_SCOUTING.md`.
+
+### Cambiado
+
+- La fecha inicial de una partida es la pretemporada, no el primer partido.
+- Tras jugar, el calendario avanza al día siguiente del partido.
+- Tests ampliados a **58**.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 58 tests superados.
+
+---
+
 ## 2026-10-21 — Menú de juego global y opciones
 
 ### Añadido

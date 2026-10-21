@@ -28,10 +28,15 @@ def news_feed(state: GameState, limit: int = 8) -> list[dict[str, Any]]:
         away = state.teams[fx.away_id]
         rival = away if home.id == user.id else home
         venue = "en casa" if home.id == user.id else "a domicilio"
+        started = any(t.played for t in state.teams.values() if t.league == state.competition)
+        if started:
+            preview_body = f"Jornada {fx.round} · {fx.date}. El equipo llega {venue} con forma {_form(state)} y es {pos}º en {state.competition}."
+        else:
+            preview_body = f"Jornada {fx.round} · {fx.date}. La temporada aún no ha empezado; el equipo ultima la pretemporada {venue}."
         items.append({
             "category": "Previa", "hot": True,
             "headline": f"{user.name} y {rival.name} miden su momento",
-            "body": f"Jornada {fx.round} · {fx.date}. El equipo llega {venue} con forma {_form(state)} y es {pos}º en {state.competition}.",
+            "body": preview_body,
             "date": fx.date, "crest_id": user.id, "crest_id2": rival.id,
         })
     if state.last_result:
@@ -44,12 +49,20 @@ def news_feed(state: GameState, limit: int = 8) -> list[dict[str, Any]]:
         })
     if table:
         leader = table[0]
-        items.append({
-            "category": "Liga",
-            "headline": f"{leader.name} manda en {state.competition}",
-            "body": f"{leader.points} puntos y {leader.goals_for - leader.goals_against:+d} de diferencia. Tu equipo es {pos}º con {user.points}.",
-            "date": state.date, "crest_id": leader.id,
-        })
+        if any(t.played for t in state.teams.values() if t.league == state.competition):
+            items.append({
+                "category": "Liga",
+                "headline": f"{leader.name} manda en {state.competition}",
+                "body": f"{leader.points} puntos y {leader.goals_for - leader.goals_against:+d} de diferencia. Tu equipo es {pos}º con {user.points}.",
+                "date": state.date, "crest_id": leader.id,
+            })
+        else:
+            items.append({
+                "category": "Pretemporada",
+                "headline": f"{state.competition}: la temporada está a punto",
+                "body": "Los clubes ultiman la preparación. La clasificación todavía no refleja partidos oficiales.",
+                "date": state.date, "crest_id": user.id,
+            })
     if state.transfer_offers:
         o = state.transfer_offers[0]
         items.append({

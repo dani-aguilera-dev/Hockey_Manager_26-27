@@ -8,12 +8,14 @@ def test_market_window():
     state = new_game("cd-terrassa", "Test", seed=501)
     assert market_window(state) == "verano"
     play_round(state, None, "equilibrado")
+    # El primer partido no cierra el mercado: sigue abierto hasta el 30/09.
+    assert market_window(state) == "verano"
+    state.date = "2026-10-01"
     assert market_window(state) == "cerrado"
-    # avanzar hasta la ventana de invierno (ronda 12)
-    for _ in range(10):
-        play_round(state, None, "equilibrado")
-    assert state.round == 12
+    state.date = "2027-01-01"
     assert market_window(state) == "invierno"
+    state.date = "2027-02-01"
+    assert market_window(state) == "cerrado"
 
 
 def test_transfer_and_contracts():

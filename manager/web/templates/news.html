@@ -28,4 +28,9 @@
 {% endfor %}
 </div>
 {% endif %}
+{% if daily_events %}
+<div class="card" style="margin-top:14px"><h2>Diario del club</h2>
+{% for e in daily_events %}<div class="news-card"><div class="cat">{{ e.category }} · {{ e.date|fdate }}{% if e.league %} · {{ e.league }}{% endif %}</div><h3>{{ e.headline }}</h3><p>{{ e.body }}</p></div>{% endfor %}
+</div>
+{% endif %}
 {% endblock %}
