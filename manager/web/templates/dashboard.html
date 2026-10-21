@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
@@ -41,6 +42,10 @@
   </div>
 </div>
 <div class="grid grid-3">
+  <div class="card">
+    <h3>Jugadores clave</h3>
+    {% for p in key_players %}<div style="margin-bottom:8px">{{ m.player_card(p, url_for('player_detail', player_id=p.id), compact=true) }}</div>{% endfor %}
+  </div>
   <div class="card">
     <h3>Clasificación</h3>
     <table>

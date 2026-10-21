@@ -1,32 +1,30 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Mercado{% endblock %}
 {% block content %}
-<h1>Mercado y contratos</h1>
-<p><span class="badge">{{ market_status }}</span> · Caja {{ team.budget|money }} · Fichajes {{ team.transfer_budget|money }}</p>
-<div class="actions">
-  <a class="btn" href="{{ url_for('market_offers') }}">Ofertas recibidas ({{ offers|length }})</a>
-  <a class="btn" href="{{ url_for('market_renew') }}">Renovar contratos</a>
-  <a class="btn" href="{{ url_for('staff') }}">Staff</a>
+<div class="row" style="justify-content:space-between;align-items:end">
+  <div><h1>Mercado y contratos</h1><p><span class="badge">{{ market_status }}</span> · Caja {{ team.budget|money }} · Fichajes {{ team.transfer_budget|money }}</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('market_offers') }}">Ofertas ({{ offers|length }})</a><a class="btn" href="{{ url_for('market_renew') }}">Renovar</a><a class="btn" href="{{ url_for('staff') }}">Staff</a></div>
 </div>
 {% if window != 'cerrado' %}
-<div class="card">
-<h3>Buscar jugadores</h3>
-<form method="get" class="row">
+<div class="card"><form method="get" class="row">
   <div class="field"><label>Valor máximo</label><input name="max_value" value="{{ max_value }}" inputmode="numeric"></div>
   <div class="field"><label>Posición</label><select name="position"><option value="">Todas</option>{% for x in ['Portero','Central','Lateral','Medio','Delantero'] %}<option value="{{x}}" {% if position==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
   <button class="btn primary" type="submit">Buscar</button>
-</form>
-</div>
-<div class="card">
-<table><thead><tr><th>Jugador</th><th>Club</th><th>Pos</th><th class="num">Edad</th><th>OVR ojeado</th><th class="num">Precio</th><th class="num">Salario</th><th></th></tr></thead><tbody>
+</form></div>
+<div class="player-grid" style="margin-top:12px">
 {% for p in players %}
-{% set owner = 'Agente libre' %}
-{% for t in state.teams.values() %}{% for x in t.players %}{% if x.id == p.id %}{% set owner = t.name %}{% endif %}{% endfor %}{% endfor %}
-<tr><td>{{ p.name }}</td><td>{{ owner }}</td><td>{{ p.subposition }}</td><td class="num">{{ p.age }}</td><td>{{ scout_range(p, team.staff_rating('scout')) }}</td><td class="num">{{ asking_price(p)|money }}</td><td class="num">{{ p.salary|money }}</td><td><a class="btn small" href="{{ url_for('market_player', player_id=p.id) }}">Ver / ofertar</a></td></tr>
-{% endfor %}
-</tbody></table>
+<div class="player-card">
+  {{ m.avatar(p) }}
+  <div class="pc-body">
+    <div class="pc-name">{{ p.name }}</div>
+    <div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>
+    <div class="pc-meta"><span>{{ owners.get(p.id,'—') }}</span><span>{{ p.age }} años</span><span><b>{{ p.overall|round|int }}</b> OVR</span></div>
+    <div class="pc-sub">Ojeado {{ scout_range(p, team.staff_rating('scout')) }} · Precio {{ asking_price(p)|money }} · Salario {{ p.salary|money }}</div>
+    <div class="actions" style="margin-top:6px"><a class="btn small primary" href="{{ url_for('market_player', player_id=p.id) }}">Ver / ofertar</a></div>
+  </div>
 </div>
-{% else %}
-<div class="card"><p>El mercado está cerrado. Se abre antes del primer partido y en la jornada 12.</p></div>
-{% endif %}
+{% endfor %}
+</div>
+{% else %}<div class="card"><p>El mercado está cerrado. Se abre antes del primer partido y en la jornada 12.</p></div>{% endif %}
 {% endblock %}

@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-21 — Fotos de jugadores e interfaz web más cómoda
+
+### Añadido
+
+- Fotos locales de todos los jugadores en la web:
+  - ruta segura `/photo/<archivo>`;
+  - fallback a avatar con iniciales;
+  - fotos en plantilla, ficha, táctica, mercado y partido en directo.
+- Plantilla rediseñada por grupos de posición con fichas visuales.
+- Ficha de jugador con foto grande, posición y arquetipo destacados y barras de atributos.
+- Pizarrón de táctica con slots por posición, foto, OVR, arquetipo y selector de jugador.
+- Mercado rediseñado con fichas de jugador.
+- Previa y partido en directo con fotos y datos destacados.
+- Tests de fotos y plantilla web.
+
+### Cambiado
+
+- Tests ampliados a 50.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 50 tests superados.
+
+---
+
 ## 2026-10-21 — Alpha web local
 
 ### Añadido

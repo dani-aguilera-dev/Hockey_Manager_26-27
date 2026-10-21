@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import pytest
 
 
@@ -25,6 +27,20 @@ def test_web_new_and_main_routes(client):
     for path in ("/dashboard", "/squad", "/tactics", "/training", "/market", "/staff", "/youth", "/press", "/cup", "/table", "/match"):
         rr = client.get(path)
         assert rr.status_code == 200, path
+
+
+def test_web_player_photo_and_cards(client):
+    import web.app as web
+    _new(client, seed="14")
+    state = list(web.GAMES.values())[-1]
+    player = next((p for p in state.user_team.players if p.photo), None)
+    assert player is not None
+    r = client.get("/photo/" + quote(player.photo))
+    assert r.status_code == 200
+    assert r.mimetype.startswith("image/")
+    html = client.get("/squad").get_data(as_text=True)
+    assert "avatar" in html
+    assert "archetype" in html or "Central" in html
 
 
 def test_web_training_and_quick_match(client):

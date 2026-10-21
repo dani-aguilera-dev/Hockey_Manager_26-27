@@ -11,7 +11,8 @@ from datetime import date
 from functools import wraps
 from pathlib import Path
 
-from flask import (Flask, flash, redirect, render_template, request, session, url_for)
+from flask import (Flask, abort, flash, redirect, render_template, request,
+                   send_from_directory, session, url_for)
 
 from src.calendar import league_table
 from src.cup import cup_round_fixtures, cup_status_text, cup_next_user_fixture
@@ -34,6 +35,8 @@ from src.training import (DAYS, PLAN_PRESETS, SESSION_ORDER, SESSION_TYPES,
 from src.youth import promote_youth, release_youth
 
 BASE = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = BASE.parent
+PHOTOS = PROJECT_ROOT / "jugadores"
 WEB_DB = Path(os.environ.get("HOCKEY_WEB_DB", BASE / "saves" / "web.db"))
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = os.environ.get("HOCKEY_WEB_SECRET", "hockey-manager-alpha-local")
@@ -111,6 +114,23 @@ app.jinja_env.filters["money"] = fmt_money
 app.jinja_env.filters["fdate"] = fmt_date
 
 
+def photo_src(player):
+    if getattr(player, "photo", ""):
+        return url_for("player_photo", filename=player.photo)
+    if getattr(player, "photo_remote", ""):
+        return player.photo_remote
+    return url_for("static", filename="avatar.svg")
+
+
+def initials(name):
+    parts = [p for p in str(name or "").split() if p]
+    return "".join(p[0] for p in parts[:2]).upper() or "?"
+
+
+app.jinja_env.globals["photo_src"] = photo_src
+app.jinja_env.globals["initials"] = initials
+
+
 @app.context_processor
 def inject_globals():
     state = get_state()
@@ -119,6 +139,14 @@ def inject_globals():
         "current_team": state.user_team if state else None,
         "current_table": state.table() if state else [],
     }
+
+
+@app.route("/photo/<path:filename>")
+def player_photo(filename):
+    try:
+        return send_from_directory(PHOTOS, filename)
+    except Exception:
+        abort(404)
 
 
 @app.route("/")
@@ -193,6 +221,7 @@ def dashboard():
         return redirect(url_for("season_end"))
     ctx = state_context(state)
     ctx["inbox"] = state.inbox[-4:]
+    ctx["key_players"] = sorted(state.user_team.players, key=lambda p: p.overall, reverse=True)[:3]
     ctx["live_ctx"] = LIVE.get(session.get("game_id"))
     return render_template("dashboard.html", **ctx)
 
@@ -202,6 +231,12 @@ def dashboard():
 def squad():
     ctx = state_context(get_state())
     ctx["players"] = sorted(ctx["team"].players, key=lambda p: (p.subposition, -p.overall))
+    groups = []
+    for group in ("Portero", "Defensa", "Medio", "Delantero"):
+        members = [p for p in ctx["players"] if p.position_group == group]
+        if members:
+            groups.append((group, members))
+    ctx["groups"] = groups
     return render_template("squad.html", **ctx)
 
 
@@ -228,23 +263,32 @@ def tactics():
             value = request.form.get(field)
             if value:
                 setattr(team.tactics, field, value)
-        selected = request.form.getlist("lineup")
-        if selected:
-            if len(selected) == 11 and len(set(selected)) == 11:
-                state.manual_lineup = selected
-                flash("Once manual guardado.", "success")
-            else:
-                flash("El once manual debe tener exactamente 11 jugadores.", "danger")
-        else:
+        if request.form.get("auto"):
             state.manual_lineup = []
             flash("Autoalineación activada.", "success")
+        else:
+            slots = FORMATION_SLOTS.get(team.tactics.formation, FORMATION_SLOTS["4-3-3"])
+            selected = [request.form.get(f"slot_{i}", "") for i in range(len(slots))]
+            selected = [x for x in selected if x]
+            if len(selected) == 11 and len(set(selected)) == 11:
+                state.manual_lineup = selected
+                flash("Once guardado.", "success")
+            else:
+                flash("El once debe tener 11 jugadores distintos. Se mantiene el anterior.", "danger")
         save_state(state)
         return redirect(url_for("tactics"))
     ctx = state_context(state)
     line, bench = make_lineup(team, state.manual_lineup or None)
     slots = FORMATION_SLOTS.get(team.tactics.formation, FORMATION_SLOTS["4-3-3"])
+    slot_options = []
+    for i, slot in enumerate(slots):
+        candidates = sorted(team.available_players, key=lambda p: p.selection_score(slot), reverse=True)[:14]
+        if i < len(line) and line[i] not in candidates:
+            candidates.append(line[i])
+        slot_options.append(candidates)
     ctx.update({"line": line, "bench": bench, "slots": slots,
                 "available": sorted(team.available_players, key=lambda p: (p.subposition, -p.overall)),
+                "slot_options": slot_options,
                 "formations": list(FORMATION_SLOTS), "selected": set(state.manual_lineup)})
     return render_template("tactics.html", **ctx)
 
@@ -298,9 +342,13 @@ def market():
     max_value = int(max_value) if max_value.isdigit() else max(100000, int(state.user_team.transfer_budget / 0.70))
     position = request.args.get("position", "")
     players = market_players(state, limit=30, max_value=max_value, position=position or None)
+    owners = {p.id: t.name for t in state.teams.values() for p in t.players}
+    for p in state.free_agents:
+        owners[p.id] = "Agente libre"
     ctx.update({"players": players, "max_value": max_value, "position": position,
                 "asking_price": asking_price, "scout_range": scout_range,
-                "window": market_window(state), "offers": state.transfer_offers})
+                "window": market_window(state), "offers": state.transfer_offers,
+                "owners": owners})
     return render_template("market.html", **ctx)
 
 
@@ -573,7 +621,8 @@ def match_live():
                       "away": state.teams[ctx.fixture.away_id],
                       "line": engine._lineup(ctx.user_side),
                       "bench": engine._bench(ctx.user_side),
-                      "player_rows": engine.player_live_rows(ctx.user_side)})
+                      "player_rows": engine.player_live_rows(ctx.user_side),
+                      "players_by_id": {p.id: p for p in state.user_team.players}})
     return render_template("match_live.html", **ctx_state)
 
 

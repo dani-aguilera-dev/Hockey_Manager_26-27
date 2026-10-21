@@ -137,6 +137,9 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
             if age >= 32:
                 contract_years = 1
             contract_until = f"{2027 + contract_years - 1}-06-30"
+            photo_rel = str(r.get("archivo_original") or "").strip()
+            photo = photo_rel if photo_rel and (BASE / "jugadores" / photo_rel).exists() else ""
+            photo_remote = str(r.get("imagen_url") or "").strip()
             players.append(PlayerState(
                 id=pid, name=name, team_name=club["name"],
                 position_group=str(r.get("position_group") or r.get("pos") or "Medio"),
@@ -145,7 +148,7 @@ def load_teams() -> tuple[dict[str, TeamState], dict[str, dict], dict[str, dict]
                 archetype=str(r.get("archetype") or "Jugador"),
                 perfil=str(r.get("perfil") or "Jugador"),
                 goals_isquad=goals, value=value, polivalencia=poly, overalls=overalls,
-                contract_until=contract_until,
+                contract_until=contract_until, photo=photo, photo_remote=photo_remote,
             ))
         fin = club.get("finances", {})
         stadium = club.get("stadium", {})

@@ -128,6 +128,8 @@ class PlayerState:
     rating_sum: float = 0.0
     salary: int = 0
     contract_until: str = "2028-06-30"
+    photo: str = ""
+    photo_remote: str = ""
 
     @property
     def available(self) -> bool:

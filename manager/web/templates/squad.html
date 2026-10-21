@@ -1,21 +1,27 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Plantilla{% endblock %}
 {% block content %}
-<div class="row" style="justify-content:space-between"><h1>Plantilla</h1><span class="badge">{{ team.players|length }} fichas · {{ team.squad|length }} jugadores</span></div>
-<div class="card">
-<table>
-<thead><tr><th>Jugador</th><th>Pos</th><th class="num">Edad</th><th class="num">OVR</th><th class="num">Forma</th><th class="num">Fatiga</th><th class="num">Moral</th><th>Estado</th><th class="num">Goles</th><th class="num">Salario</th><th>Contrato</th></tr></thead>
-<tbody>
-{% for p in players %}
-<tr>
-  <td><a href="{{ url_for('player_detail', player_id=p.id) }}">{{ p.name }}</a> <span class="tag">{{ p.archetype }}</span></td>
-  <td>{{ p.subposition }}</td><td class="num">{{ p.age }}</td><td class="num">{{ '%.1f'|format(p.overall) }}</td>
-  <td class="num">{{ '%.1f'|format(p.form) }}</td><td class="num">{{ '%.0f'|format(p.fatigue) }}%</td><td class="num">{{ p.morale }}</td>
-  <td>{% if p.injury %}<span class="badge danger">Lesionado {{ p.injury }}</span>{% elif p.suspension %}<span class="badge warn">Sancionado</span>{% else %}<span class="badge ok">Disponible</span>{% endif %}</td>
-  <td class="num">{{ p.season_goals }}</td><td class="num">{{ p.salary|money }}</td><td>{{ p.contract_until }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+<div class="row" style="justify-content:space-between;align-items:end">
+  <div><h1>Plantilla</h1><p class="muted">{{ team.squad|length }} jugadores de plantilla · {{ team.players|length }} fichas · Gestión {{ '%.0f'|format(team.management_score()) }}/100</p></div>
+  <a class="btn" href="{{ url_for('tactics') }}">Editar once</a>
 </div>
+{% for group, members in groups %}
+<div class="section-title"><h2>{{ group }}</h2><span class="badge">{{ members|length }}</span></div>
+<div class="player-grid">
+  {% for p in members %}
+  <div class="player-card">
+    <a href="{{ url_for('player_detail', player_id=p.id) }}" style="display:flex;gap:11px;align-items:center;min-width:0;flex:1">
+      {{ m.avatar(p) }}
+      <div class="pc-body">
+        <div class="pc-name">{{ p.name }}</div>
+        <div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>
+        <div class="pc-meta"><span><b>{{ '%.1f'|format(p.overall) }}</b> OVR</span><span>{{ p.age }} años</span><span>Fatiga {{ '%.0f'|format(p.fatigue) }}%</span></div>
+        <div class="pc-sub">{{ p.contract_until }} · {{ p.salary|money }}{% if p.injury %} · <span class="badge danger">Lesión {{ p.injury }}</span>{% elif p.suspension %} · <span class="badge warn">Sanción</span>{% endif %}</div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
 {% endblock %}

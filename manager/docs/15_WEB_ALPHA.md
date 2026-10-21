@@ -32,8 +32,11 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - Nueva partida con club DHA o DHB.
 - Carga y guardado de partidas en SQLite.
 - Dashboard con próximo partido, clasificación, caja, entrenamiento, Copa e inbox.
-- Plantilla y ficha de jugador.
-- Táctica y once automático/manual.
+- **Fotos de los jugadores** servidas desde `jugadores/` con fallback a avatar.
+- Plantilla en fichas por posición, con foto, posición y arquetipo destacados.
+- Ficha de jugador con foto grande, badges y barras de atributos.
+- Táctica y once: pizarrón de slots con foto, posición, arquetipo, OVR y selector por puesto.
+- Mercado en fichas de jugador con foto, club, posición y arquetipo.
 - Entrenamiento semanal: automático, recuperación o plan editado.
 - Mercado: búsqueda, agentes libres, ofertas de traspaso, ofertas recibidas y renovaciones.
 - Staff: contratar y despedir; junta directiva.
@@ -94,4 +97,4 @@ python3 -m pytest src/tests -q
 
 Incluye pruebas de rutas web, nueva partida, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **49 tests superados**.
+Resultado actual: **50 tests superados**.

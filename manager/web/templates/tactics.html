@@ -1,45 +1,47 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Táctica{% endblock %}
 {% block content %}
 <h1>Táctica y once</h1>
-<div class="grid grid-2">
-<div class="card">
+<p class="muted">Elige formación e instrucciones y ajusta cada posición desde su ficha. Los jugadores están ordenados por encaje y nivel.</p>
 <form method="post">
-  <h3>Planteamiento</h3>
-  <div class="row">
-    <div class="field"><label>Formación</label><select name="formation">{% for x in formations %}<option value="{{x}}" {% if team.tactics.formation==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Mentalidad</label><select name="mentality">{% for x in ['muy_defensiva','defensiva','equilibrada','ofensiva','muy_ofensiva'] %}<option value="{{x}}" {% if team.tactics.mentality==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Presión</label><select name="press">{% for x in ['baja','media','alta','muy_alta'] %}<option value="{{x}}" {% if team.tactics.press==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Bloque</label><select name="block">{% for x in ['bajo','medio','alto'] %}<option value="{{x}}" {% if team.tactics.block==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Anchura</label><select name="width">{% for x in ['estrecha','normal','ancha'] %}<option value="{{x}}" {% if team.tactics.width==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Tempo</label><select name="tempo">{% for x in ['lento','normal','rapido'] %}<option value="{{x}}" {% if team.tactics.tempo==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Pase</label><select name="passing">{% for x in ['corto','mixto','directo'] %}<option value="{{x}}" {% if team.tactics.passing==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
-    <div class="field"><label>Rutina PC</label><select name="pc_routine">{% for x in ['directa','slip_izquierda','slip_derecha','desvio','rebote'] %}<option value="{{x}}" {% if team.tactics.pc_routine==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Planteamiento</h3>
+    <div class="row">
+      <div class="field"><label>Formación</label><select name="formation">{% for x in formations %}<option value="{{x}}" {% if team.tactics.formation==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Mentalidad</label><select name="mentality">{% for x in ['muy_defensiva','defensiva','equilibrada','ofensiva','muy_ofensiva'] %}<option value="{{x}}" {% if team.tactics.mentality==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Presión</label><select name="press">{% for x in ['baja','media','alta','muy_alta'] %}<option value="{{x}}" {% if team.tactics.press==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Bloque</label><select name="block">{% for x in ['bajo','medio','alto'] %}<option value="{{x}}" {% if team.tactics.block==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="field"><label>Anchura</label><select name="width">{% for x in ['estrecha','normal','ancha'] %}<option value="{{x}}" {% if team.tactics.width==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Tempo</label><select name="tempo">{% for x in ['lento','normal','rapido'] %}<option value="{{x}}" {% if team.tactics.tempo==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Pase</label><select name="passing">{% for x in ['corto','mixto','directo'] %}<option value="{{x}}" {% if team.tactics.passing==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Rutina PC</label><select name="pc_routine">{% for x in ['directa','slip_izquierda','slip_derecha','desvio','rebote'] %}<option value="{{x}}" {% if team.tactics.pc_routine==x %}selected{% endif %}>{{x|replace('_',' ')}}</option>{% endfor %}</select></div>
+    </div>
+    <div class="actions"><button class="btn primary" type="submit">Guardar once y táctica</button><button class="btn" type="submit" name="auto" value="1">Autoalineación</button></div>
   </div>
-  <h3 style="margin-top:20px">Once inicial</h3>
-  <p class="small muted">Marca exactamente 11 jugadores. Si no marcas ninguno, se usará la autoalineación.</p>
-  <div class="lineup">
-  {% for p in available %}
-    <label class="player-pill"><input type="checkbox" name="lineup" value="{{ p.id }}" {% if p.id in selected %}checked{% endif %}> <b>{{ p.name }}</b> · {{ p.subposition }} · OVR {{ '%.1f'|format(p.overall) }} · fatiga {{ '%.0f'|format(p.fatigue) }}%</label>
-  {% endfor %}
+  <div class="card">
+    <h3>Once actual</h3>
+    <div class="lineup-board">
+      {% for i in range(slots|length) %}{% set p = line[i] if i < line|length else None %}
+      <div class="slot-card">
+        <div class="row" style="justify-content:space-between"><span class="slot-code">{{ slots[i] }}</span>{% if p %}<span class="badge">{{ '%.1f'|format(p.overall) }}</span>{% endif %}</div>
+        {% if p %}{{ m.avatar(p) }}<div class="slot-name">{{ p.name }}</div><div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>{% endif %}
+        <select name="slot_{{i}}">
+          {% for x in slot_options[i] %}
+          <option value="{{x.id}}" {% if p and x.id==p.id %}selected{% endif %}>{{x.name}} · {{x.subposition}} · {{ '%.1f'|format(x.overall) }} · {{x.archetype}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
   </div>
-  <div class="actions"><button class="btn primary" type="submit">Guardar táctica</button><a class="btn" href="{{ url_for('tactics') }}">Recargar</a></div>
+</div>
 </form>
-</div>
-<div class="card">
-<h3>Once actual</h3>
-<div class="lineup">
-{% for i in range(slots|length) %}{% set p = line[i] if i < line|length else None %}
-  <div class="player-pill"><span class="tag">{{ slots[i] }}</span><br>{% if p %}<b>{{ p.name }}</b><br>{{ p.subposition }} · OVR {{ '%.1f'|format(p.overall) }} · fatiga {{ '%.0f'|format(p.fatigue) }}%{% else %}—{% endif %}</div>
-{% endfor %}
-</div>
-<h3 style="margin-top:18px">Banquillo</h3>
-{% for p in bench %}<span class="badge">{{ p.name }} · {{ p.subposition }}</span> {% endfor %}
-<h3 style="margin-top:18px">Especialistas</h3>
-{% set sp = team.specialists(line) %}
-{% for k,label in [('pc_injector','Inyector'),('pc_stopper','Stopper'),('pc_flicker','Flicker'),('pc_deflector','Desviador'),('pc_first_runner','Primer runner'),('stroke_taker','Stroke'),('free_hit_taker','Faltas')] %}
-<p class="small">{{ label }}: <b>{{ sp[k].name if sp[k] else '—' }}</b></p>
-{% endfor %}
-</div>
-</div>
+<div class="section-title"><h2>Banquillo</h2></div>
+<div class="player-grid">{% for p in bench %}{{ m.player_card(p, compact=true) }}{% endfor %}</div>
+<div class="section-title"><h2>Jugadores disponibles</h2><span class="muted small">Haz clic en una ficha para ver el detalle</span></div>
+<div class="pool-grid">{% for p in available %}{{ m.player_card(p, url_for('player_detail', player_id=p.id), compact=true) }}{% endfor %}</div>
 {% endblock %}
