@@ -64,6 +64,18 @@ def list_saves(path: Path | str = DEFAULT_DB) -> list[dict]:
     return [dict(zip(keys, r)) for r in rows]
 
 
+def _backfill_communities(state: GameState) -> None:
+    """Rellena la comunidad en partidas antiguas sin reescribir sus datos."""
+    try:
+        from .data_loader import load_clubs
+        clubs, _ = load_clubs()
+    except Exception:
+        return
+    for team_id, team in state.teams.items():
+        if not team.community:
+            team.community = clubs.get(team_id, {}).get("community", "")
+
+
 def load_game(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> GameState:
     conn = _connect(path)
     try:
@@ -75,7 +87,9 @@ def load_game(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> GameState
         conn.close()
     if not row:
         raise KeyError(f"No existe la partida: {name_or_id}")
-    return GameState.from_dict(json.loads(row[0]))
+    state = GameState.from_dict(json.loads(row[0]))
+    _backfill_communities(state)
+    return state
 
 
 def delete_save(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> bool:
@@ -99,4 +113,6 @@ def export_json(state: GameState, path: Path | str) -> Path:
 
 
 def import_json(path: Path | str) -> GameState:
-    return GameState.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+    state = GameState.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+    _backfill_communities(state)
+    return state

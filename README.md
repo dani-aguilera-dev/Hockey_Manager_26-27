@@ -47,7 +47,7 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. El juego ya es jugable con **DHA y DHB** desde el inicio, con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, DHB de dos fases, agentes libres, Copa del Rey, cantera, prensa, junta dinámica, logística, clasificación, Final Four, playout y guardado/carga. La **web alpha** añade fotos reales de los 976 jugadores, escudos oficiales de iSquad, noticias generadas y un editor de once visual.
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. El juego ya es jugable con **DHA y DHB** desde el inicio, con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, DHB de dos fases, agentes libres, Copa del Rey, cantera, prensa, junta dinámica, logística, clasificación, Final Four, playout y guardado/carga. La **web alpha** añade fotos reales de los 976 jugadores, escudos oficiales de iSquad, noticias generadas, un editor de once visual y un menú global para guardar, cargar, volver al menú principal y ajustar opciones.
 
 - [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.

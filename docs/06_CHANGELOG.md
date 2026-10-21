@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-21 — Menú de juego global y opciones
+
+### Añadido
+
+- **Menú de juego** accesible desde todas las pantallas:
+  - continuar;
+  - guardar partida con nombre editable;
+  - cargar partida;
+  - volver a la pantalla anterior;
+  - menú principal;
+  - nueva partida;
+  - opciones;
+  - salir al menú principal con guardado automático y confirmación opcional.
+- **Menú principal** con partida en curso, guardado rápido, acceso a carga y partidas recientes.
+- **Opciones**: tamaño de texto normal/grande, modo compacto y confirmación al salir.
+- Nombres de guardado legibles: `Club · temporada · código corto`.
+- Script `manager/web/static/app.js` para apertura, cierre, foco, Escape y confirmación del menú.
+- Tests de menú, opciones y salida de partida.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 53 tests superados.
+
+---
+
 ## 2026-10-21 — Escudos oficiales y cantera Sub-16/Sub-18/Sub-21
 
 ### Añadido

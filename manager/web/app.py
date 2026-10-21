@@ -71,6 +71,14 @@ def save_state(state):
     save_game(state, name, WEB_DB)
 
 
+DEFAULT_UI_PREFS = {"text_size": "normal", "compact": False, "confirm_exit": True}
+
+
+def ui_prefs():
+    stored = session.get("ui_prefs", {})
+    return {**DEFAULT_UI_PREFS, **stored}
+
+
 def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -198,6 +206,8 @@ def inject_globals():
         "current_state": state,
         "current_team": state.user_team if state else None,
         "current_table": state.table() if state else [],
+        "ui_prefs": ui_prefs(),
+        "live_active": bool(state and session.get("game_id") in LIVE),
     }
 
 
@@ -207,6 +217,49 @@ def player_photo(filename):
         return send_from_directory(PHOTOS, filename)
     except Exception:
         abort(404)
+
+
+@app.route("/main-menu")
+def main_menu():
+    state = get_state()
+    return render_template(
+        "main_menu.html",
+        saves=list_saves(WEB_DB)[:3],
+        live_active=bool(state and session.get("game_id") in LIVE),
+    )
+
+
+@app.route("/exit-game", methods=["POST"])
+def exit_game():
+    state = get_state()
+    if state:
+        try:
+            save_state(state)
+        except Exception:
+            pass
+    gid = session.pop("game_id", None)
+    session.pop("save_name", None)
+    if gid:
+        LIVE.pop(gid, None)
+    flash("Partida guardada. Has vuelto al menú principal.", "success")
+    return redirect(url_for("main_menu"))
+
+
+@app.route("/options", methods=["GET", "POST"])
+def options():
+    if request.method == "POST" and request.form.get("reset"):
+        session.pop("ui_prefs", None)
+        flash("Opciones restablecidas.", "success")
+        return redirect(url_for("options"))
+    if request.method == "POST":
+        session["ui_prefs"] = {
+            "text_size": "large" if request.form.get("text_size") == "large" else "normal",
+            "compact": bool(request.form.get("compact")),
+            "confirm_exit": bool(request.form.get("confirm_exit")),
+        }
+        flash("Opciones guardadas.", "success")
+        return redirect(url_for("options"))
+    return render_template("options.html")
 
 
 @app.route("/")
@@ -256,10 +309,13 @@ def new_game_page():
             flash("Elige un club DHA o DHB válido.", "danger")
             return redirect(url_for("new_game_page"))
         state = new_game(club_id, manager, seed)
+        old_gid = session.get("game_id")
+        if old_gid:
+            LIVE.pop(old_gid, None)
         gid = uuid.uuid4().hex
         GAMES[gid] = state
         session["game_id"] = gid
-        session["save_name"] = f"web-{gid}"
+        session["save_name"] = f"{state.user_team.name} · {state.season} · {gid[:4]}"
         save_state(state)
         flash(f"Partida creada con {state.user_team.name}.", "success")
         return redirect(url_for("dashboard"))
@@ -276,6 +332,9 @@ def load_page():
         except Exception as exc:
             flash(f"No se pudo cargar: {exc}", "danger")
             return redirect(url_for("load_page"))
+        old_gid = session.get("game_id")
+        if old_gid:
+            LIVE.pop(old_gid, None)
         gid = uuid.uuid4().hex
         GAMES[gid] = state
         session["game_id"] = gid

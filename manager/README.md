@@ -8,7 +8,7 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 - **Datos:** 29 clubes, 16 ciudades, 976 perfiles, 37 atributos.
 - **Motor:** DHA y DHB jugables, partidos en directo, mercado, staff, entrenamiento, cantera, Copa, EHL, multi-temporada y guardado/carga.
 - **Web alpha:** Flask + Jinja con fotos de los 976 jugadores, escudos oficiales de iSquad, noticias inmersivas y diseño responsive.
-- **Tests:** 52 superados.
+- **Tests:** 53 superados.
 
 ## Inicio rápido
 
@@ -67,7 +67,7 @@ El juego incluye:
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
 - guardado/carga SQLite;
-- **web alpha** con dashboard, noticias, escudos, fotos, táctica visual, mercado y partido en directo.
+- **web alpha** con dashboard, noticias, escudos, fotos, táctica visual, mercado, partido en directo y menú global de juego con guardado/carga/opciones.
 
 Pendiente:
 

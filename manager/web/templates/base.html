@@ -6,12 +6,13 @@
   <title>{% block title %}Hockey Manager{% endblock %}</title>
   <meta name="theme-color" content="#0b1220">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
-<body>
+<body class="{% if ui_prefs.text_size == 'large' %}text-large{% endif %} {% if ui_prefs.compact %}compact{% endif %}">
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="topbar">
   <div>
-    <a class="brand" href="{{ url_for('index') }}">HOCKEY <span>MANAGER</span></a>
+    <a class="brand" href="{{ url_for('main_menu') }}">HOCKEY <span>MANAGER</span></a>
     <div class="meta">DHA · DHB · Alpha web local</div>
   </div>
   {% if current_state %}
@@ -28,12 +29,10 @@
     <a href="{{ url_for('cup') }}">Copa</a>
     <a href="{{ url_for('table') }}">Tabla</a>
   </nav>
-  <div class="meta">
+  <div class="meta topbar-meta">
     <img class="top-crest" src="{{ crest_src(current_team) }}" alt="Escudo {{ current_team.name }}"><b>{{ current_team.name }}</b> · {{ current_state.competition }}{% if current_state.competition == 'DHB' %} · Grupo {{ current_state.dhb_group }}{% endif %} · J{{ current_state.round }} · {{ current_state.date|fdate }}
-    <form class="inline" method="post" action="{{ url_for('save_page') }}">
-      <input name="name" placeholder="nombre guardado" value="{{ session.get('save_name','') }}" size="16">
-      <button class="btn small" type="submit">Guardar</button>
-    </form>
+    <span class="save-chip" title="Guardado actual">{{ session.get('save_name','sin guardar') }}</span>
+    <button class="menu-trigger" id="game-menu-trigger" type="button" aria-haspopup="dialog" aria-controls="game-menu" aria-expanded="false"><span class="hamburger" aria-hidden="true"><span></span><span></span><span></span></span> Menú</button>
   </div>
   {% endif %}
 </header>
@@ -45,6 +44,7 @@
   {% endwith %}
   {% block content %}{% endblock %}
 </main>
+{% include "_game_menu.html" %}
 <footer class="container small muted" style="padding-top:0">Fotos y escudos: iSquad · datos RFEH/iSquad y modelo propio · proyecto personal/educativo</footer>
 </body>
 </html>

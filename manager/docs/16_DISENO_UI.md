@@ -189,7 +189,7 @@ No hace falta cambiar código.
 - Badges de posición con texto, no solo color.
 - Estados de lesión/sanción con texto además del color.
 - Mensajes flash con categoría (`success`, `danger`, `warning`).
-- Guardado visible en la barra superior.
+- Guardado visible en la barra superior y menú de juego global con guardar, cargar, volver, menú principal y opciones.
 - Autoalineación para quien no quiera ajustar 11 selects.
 - Selectores de táctica limitados por encaje para reducir carga cognitiva.
 

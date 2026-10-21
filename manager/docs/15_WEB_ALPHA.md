@@ -32,7 +32,10 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 ## 2. Qué incluye
 
 - Nueva partida con club DHA o DHB.
-- Carga y guardado de partidas en SQLite.
+- Carga y guardado de partidas en SQLite, con nombre de guardado amigable y menú de juego.
+- **Menú de juego global** en todas las pantallas: continuar, guardar, cargar, volver, menú principal, nueva partida y salida con guardado automático.
+- **Opciones**: tamaño de texto normal/grande, modo compacto y confirmación al salir.
+- **Menú principal** con partida en curso, guardado rápido y partidas recientes.
 - Dashboard con ticker de última hora, próximo partido, clasificación, caja, entrenamiento, Copa e inbox.
 - **Escudos oficiales de club** descargados de iSquad en `web/static/crests/` (29/29), con SVG estilizado como respaldo.
 - **Noticias generadas** desde el estado: previa, resultado, liga, mercado, enfermería, cantera, scouting, afición, junta y Copa.
@@ -62,6 +65,7 @@ manager/
     app.py
     templates/
     static/style.css
+    static/app.js
     static/crests/*.svg
     static/avatar.svg
   src/news.py
@@ -104,4 +108,4 @@ python3 -m pytest src/tests -q
 
 Incluye pruebas de rutas web, nueva partida, fotos, escudos, noticias, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **52 tests superados**.
+Resultado actual: **53 tests superados**.

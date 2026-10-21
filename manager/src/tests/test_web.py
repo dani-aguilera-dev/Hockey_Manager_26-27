@@ -93,6 +93,22 @@ def test_web_live_match(client):
     assert client.get("/match/report").status_code == 200
 
 
+def test_web_game_menu_options_and_exit(client):
+    _new(client, seed="16")
+    dashboard = client.get("/dashboard").get_data(as_text=True)
+    assert 'id="game-menu"' in dashboard
+    assert "Guardar partida" in dashboard
+    assert client.get("/main-menu").status_code == 200
+    assert client.get("/options").status_code == 200
+    r = client.post("/options", data={"text_size": "large", "compact": "1", "confirm_exit": "1"}, follow_redirects=True)
+    assert r.status_code == 200
+    assert "Grande" in r.get_data(as_text=True)
+    assert "text-large" in client.get("/dashboard").get_data(as_text=True)
+    r = client.post("/exit-game", follow_redirects=True)
+    assert r.status_code == 200
+    assert "Hockey Manager".encode() in r.data
+
+
 def test_web_save_and_load(client):
     _new(client, seed="13")
     r = client.post("/save", data={"name": "web-test-save"}, follow_redirects=True)
