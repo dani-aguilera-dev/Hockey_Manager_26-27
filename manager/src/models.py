@@ -271,11 +271,12 @@ class TeamState:
         if len(rotation) < 11:
             rotation = sorted(self.players, key=lambda p: (p.available, p.fatigue, -p.overall), reverse=True)
         pool = [p for p in rotation if p.subposition != "Portero" or "POR" in slots]
-        chosen: list[PlayerState] = []
+        chosen: list[PlayerState | None] = [None] * len(slots)
         used: set[str] = set()
-        # Primero porteros, luego el resto por slot.
-        priority = sorted(slots, key=lambda s: (s != "POR", s))
-        for slot in priority:
+        # Primero porteros, luego el resto por slot. Se guarda cada jugador
+        # en su índice de formación para que el once salga en orden de pista.
+        priority = sorted(enumerate(slots), key=lambda item: (item[1] != "POR", item[1], item[0]))
+        for index, slot in priority:
             # Prioridad: jugador natural del puesto > mismo grupo > cualquier otro.
             natural = [p for p in pool if p.id not in used and p.slot_fit(slot) >= 6]
             group = [p for p in pool if p.id not in used and p.slot_fit(slot) >= 3]
@@ -285,17 +286,21 @@ class TeamState:
             if not candidates:
                 break
             best = max(candidates, key=lambda p: p.selection_score(slot))
-            chosen.append(best)
+            chosen[index] = best
             used.add(best.id)
-        # Completar hasta 11 si faltan.
+        # Completar huecos hasta 11 si faltan.
         for p in sorted(rotation, key=lambda x: x.overall, reverse=True):
-            if len(chosen) >= 11:
+            if all(x is not None for x in chosen):
                 break
             if p.id not in used:
-                chosen.append(p)
-                used.add(p.id)
+                for index in range(len(chosen)):
+                    if chosen[index] is None:
+                        chosen[index] = p
+                        used.add(p.id)
+                        break
+        lineup = [p for p in chosen if p is not None][:11]
         bench = [p for p in sorted(all_available, key=lambda x: (x.fatigue, -x.overall)) if p.id not in used][:7]
-        return chosen[:11], bench
+        return lineup, bench
 
     def lineup_strength(self, lineup: list[PlayerState]) -> tuple[float, float]:
         if not lineup:

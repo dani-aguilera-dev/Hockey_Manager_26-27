@@ -7,8 +7,9 @@
   {{ m.avatar(player, 'hero-avatar') }}
   <div style="flex:1;min-width:0">
     <h1>{{ player.name }}</h1>
-    <div class="pc-tags">{{ m.pos(player) }} <span class="arch">{{ player.archetype }}</span> <span class="badge">{{ owner }}</span></div>
+    <div class="pc-tags">{{ m.pos(player) }} <span class="arch">{{ player.archetype }}</span> <span class="badge">{% if owner_team %}<img class="crest crest-sm" src="{{ crest_src(owner_team) }}" alt=""> {% endif %}{{ owner }}</span></div>
     <p class="muted">{{ player.age }} años · Overall estimado {{ scout }} · Valor {{ player.value|money }}</p>
+    {% if player.photo %}<p class="small muted">Foto: iSquad</p>{% endif %}
   </div>
 </div>
 </div>

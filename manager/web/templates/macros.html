@@ -5,6 +5,8 @@
 </div>
 {% endmacro %}
 
+{% macro crest(team, extra='') %}<img class="crest {{ extra }}" src="{{ crest_src(team) }}" alt="Escudo {{ team.name }}" loading="lazy">{% endmacro %}
+
 {% macro pos(p) %}<span class="pos pos-{{ p.subposition|lower }}">{{ p.subposition }}</span>{% endmacro %}
 
 {% macro player_card(p, href='', compact=false) %}

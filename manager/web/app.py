@@ -24,6 +24,7 @@ from src.market import (STAFF_LABELS, accept_incoming_offer, asking_price,
                         market_window_text, reject_incoming_offer,
                         renew_contract, scout_range, staff_candidates)
 from src.models import FORMATION_SLOTS
+from src.news import news_feed
 from src.persistence import list_saves, load_game, save_game
 from src.press import answer_press, mark_press_done, press_questions
 from src.season import (advance_to_next_season, ensure_week_training,
@@ -80,6 +81,55 @@ def login_required(fn):
     return wrapper
 
 
+LINE_LAYOUTS = {
+    "4-3-3": [1, 4, 3, 3],
+    "3-4-3": [1, 3, 4, 3],
+    "3-3-3-1": [1, 3, 4, 1, 2],
+    "4-4-2": [1, 4, 4, 2],
+    "5-3-2": [1, 5, 3, 2],
+    "3-2-1-4": [1, 3, 2, 1, 4],
+}
+ROW_LABELS = {
+    4: ["Portería", "Defensa", "Medio", "Ataque"],
+    5: ["Portería", "Defensa", "Medio", "Mediapunta", "Ataque"],
+}
+SLOT_GROUP = {"POR": "Portero", "CEN": "Defensa", "LAT": "Defensa", "MED": "Medio", "DEL": "Delantero"}
+
+
+def lineup_rows(team, line):
+    slots = FORMATION_SLOTS.get(team.tactics.formation, FORMATION_SLOTS["4-3-3"])
+    counts = LINE_LAYOUTS.get(team.tactics.formation, [1, 4, 3, 3])
+    labels = ROW_LABELS.get(len(counts), ROW_LABELS[4])
+    rows = []
+    cursor = 0
+    for count, label in zip(counts, labels):
+        row = []
+        for _ in range(count):
+            if cursor >= len(slots):
+                break
+            code = slots[cursor]
+            player = line[cursor] if cursor < len(line) else None
+            row.append({
+                "index": cursor, "code": code, "player": player,
+                "group": SLOT_GROUP.get(code, ""),
+                "mismatch": bool(player and player.position_group != SLOT_GROUP.get(code, player.position_group)),
+            })
+            cursor += 1
+        rows.append({"label": label, "slots": row})
+    return rows
+
+
+def team_form(state, team_id):
+    played = [f for f in state.fixtures if f.phase == "regular" and f.played and team_id in (f.home_id, f.away_id)]
+    played.sort(key=lambda f: f.round)
+    out = []
+    for f in played[-5:]:
+        gf = f.home_goals if f.home_id == team_id else f.away_goals
+        ga = f.away_goals if f.home_id == team_id else f.home_goals
+        out.append("V" if gf > ga else ("E" if gf == ga else "D"))
+    return " ".join(out) if out else "—"
+
+
 def state_context(state):
     team = state.user_team
     table = state.table()
@@ -88,6 +138,7 @@ def state_context(state):
         "state": state,
         "team": team,
         "table": table,
+        "positions": {t.id: i for i, t in enumerate(table, 1)},
         "position": pos,
         "competition": state.competition,
         "finance": financial_summary(team),
@@ -127,7 +178,16 @@ def initials(name):
     return "".join(p[0] for p in parts[:2]).upper() or "?"
 
 
+def crest_src(team):
+    tid = getattr(team, "id", team)
+    for ext in ("png", "svg"):
+        if (BASE / "web" / "static" / "crests" / f"{tid}.{ext}").exists():
+            return url_for("static", filename=f"crests/{tid}.{ext}")
+    return url_for("static", filename=f"crests/{tid}.svg")
+
+
 app.jinja_env.globals["photo_src"] = photo_src
+app.jinja_env.globals["crest_src"] = crest_src
 app.jinja_env.globals["initials"] = initials
 
 
@@ -163,6 +223,30 @@ def index():
 def new_game_page():
     teams, clubs, _ = load_teams()
     clubs_list = sorted([t for t in teams.values() if t.league in ("DHA", "DHB")], key=lambda t: (t.league, t.name))
+
+    def difficulty(expectation):
+        e = (expectation or "").lower()
+        if "título" in e or "final four" in e:
+            return "Muy alta"
+        if "top 4" in e:
+            return "Alta"
+        if "top 6" in e or "consolidar" in e:
+            return "Media"
+        if "permanencia" in e or "salvación" in e:
+            return "Baja"
+        if "ascenso" in e:
+            return "Alta"
+        return "Media"
+
+    club_cards = []
+    for t in clubs_list:
+        c = clubs.get(t.id, {})
+        st = c.get("stadium", {})
+        club_cards.append({
+            "team": t, "stadium": st.get("name", t.stadium_name),
+            "expectation": t.board_expectation,
+            "difficulty": difficulty(t.board_expectation),
+        })
     if request.method == "POST":
         club_id = request.form.get("club_id", "")
         manager = request.form.get("manager", "Entrenador").strip() or "Entrenador"
@@ -179,7 +263,7 @@ def new_game_page():
         save_state(state)
         flash(f"Partida creada con {state.user_team.name}.", "success")
         return redirect(url_for("dashboard"))
-    return render_template("new_game.html", clubs=clubs_list, clubs_by_id=clubs)
+    return render_template("new_game.html", clubs=clubs_list, club_cards=club_cards, clubs_by_id=clubs)
 
 
 @app.route("/load", methods=["GET", "POST"])
@@ -221,9 +305,19 @@ def dashboard():
         return redirect(url_for("season_end"))
     ctx = state_context(state)
     ctx["inbox"] = state.inbox[-4:]
+    ctx["news"] = news_feed(state, 4)
     ctx["key_players"] = sorted(state.user_team.players, key=lambda p: p.overall, reverse=True)[:3]
     ctx["live_ctx"] = LIVE.get(session.get("game_id"))
     return render_template("dashboard.html", **ctx)
+
+
+@app.route("/news")
+@login_required
+def news():
+    state = get_state()
+    ctx = state_context(state)
+    ctx["news"] = news_feed(state, 12)
+    return render_template("news.html", **ctx)
 
 
 @app.route("/squad")
@@ -259,11 +353,15 @@ def tactics():
     state = get_state()
     team = state.user_team
     if request.method == "POST":
+        old_formation = team.tactics.formation
         for field in ("formation", "mentality", "press", "block", "width", "tempo", "passing", "pc_routine"):
             value = request.form.get(field)
             if value:
                 setattr(team.tactics, field, value)
-        if request.form.get("auto"):
+        if team.tactics.formation != old_formation:
+            state.manual_lineup = []
+            flash("Formación cambiada. Once autoalineado.", "success")
+        elif request.form.get("auto"):
             state.manual_lineup = []
             flash("Autoalineación activada.", "success")
         else:
@@ -286,7 +384,8 @@ def tactics():
         if i < len(line) and line[i] not in candidates:
             candidates.append(line[i])
         slot_options.append(candidates)
-    ctx.update({"line": line, "bench": bench, "slots": slots,
+    slot_rows = lineup_rows(team, line)
+    ctx.update({"line": line, "bench": bench, "slots": slots, "slot_rows": slot_rows,
                 "available": sorted(team.available_players, key=lambda p: (p.subposition, -p.overall)),
                 "slot_options": slot_options,
                 "formations": list(FORMATION_SLOTS), "selected": set(state.manual_lineup)})
@@ -341,14 +440,24 @@ def market():
     max_value = request.args.get("max_value", "").strip()
     max_value = int(max_value) if max_value.isdigit() else max(100000, int(state.user_team.transfer_budget / 0.70))
     position = request.args.get("position", "")
+    query = request.args.get("q", "").strip()
     players = market_players(state, limit=30, max_value=max_value, position=position or None)
     owners = {p.id: t.name for t in state.teams.values() for p in t.players}
+    owner_teams = {p.id: t for t in state.teams.values() for p in t.players}
     for p in state.free_agents:
         owners[p.id] = "Agente libre"
-    ctx.update({"players": players, "max_value": max_value, "position": position,
+    if query:
+        needle = query.lower()
+        players = [
+            p for p in players
+            if needle in p.name.lower()
+            or needle in p.archetype.lower()
+            or needle in owners.get(p.id, "").lower()
+        ]
+    ctx.update({"players": players, "max_value": max_value, "position": position, "query": query,
                 "asking_price": asking_price, "scout_range": scout_range,
                 "window": market_window(state), "offers": state.transfer_offers,
-                "owners": owners})
+                "owners": owners, "owner_teams": owner_teams})
     return render_template("market.html", **ctx)
 
 
@@ -376,8 +485,9 @@ def market_player(player_id):
             save_state(state)
         return redirect(url_for("market"))
     ctx = state_context(state)
-    owner = next((t.name for t in state.teams.values() if any(p.id == player.id for p in t.players)), "Agente libre")
-    ctx.update({"player": player, "owner": owner, "asking": asking_price(player),
+    owner_team = next((t for t in state.teams.values() if any(p.id == player.id for p in t.players)), None)
+    owner = owner_team.name if owner_team else "Agente libre"
+    ctx.update({"player": player, "owner": owner, "owner_team": owner_team, "asking": asking_price(player),
                 "scout": scout_range(player, state.user_team.staff_rating("scout"))})
     return render_template("market_player.html", **ctx)
 
@@ -515,7 +625,7 @@ def press():
         mark_press_done(state)
         save_state(state)
         flash("Rueda de prensa completada.", "success")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("press"))
     ctx = state_context(state)
     ctx["questions"] = press_questions(state)
     ctx["done"] = state.press_done_round == state.round
@@ -569,7 +679,17 @@ def match_page():
         _, cities = load_clubs()
         travel = travel_options(user, home, cities, squad_size=18)
     ctx = state_context(state)
-    ctx.update({"fixture": fx, "home": home, "away": away, "line": line, "bench": bench, "travel": travel})
+    def top_scorer(t):
+        return max(t.players, key=lambda p: (p.season_goals, p.overall), default=None)
+    def absences(t):
+        return [p for p in t.players if p.injury or p.suspension]
+    ctx.update({
+        "fixture": fx, "home": home, "away": away, "line": line, "bench": bench, "travel": travel,
+        "home_top": top_scorer(home), "away_top": top_scorer(away),
+        "home_absences": absences(home), "away_absences": absences(away),
+        "home_form": team_form(state, home.id), "away_form": team_form(state, away.id),
+        "slot_rows": lineup_rows(user, line),
+    })
     return render_template("match_preview.html", **ctx)
 
 

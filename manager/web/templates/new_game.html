@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Nueva partida{% endblock %}
 {% block content %}
 <h1>Nueva partida</h1>
@@ -7,22 +8,25 @@
   <div class="row">
     <div class="field"><label>Entrenador</label><input name="manager" value="Entrenador" required></div>
     <div class="field"><label>Semilla (opcional)</label><input name="seed" inputmode="numeric" placeholder="aleatoria"></div>
-    <div class="field wide"><label>Club</label>
-      <select name="club_id" required>
-        <optgroup label="DHA · División de Honor A">
-        {% for t in clubs if t.league == 'DHA' %}
-          <option value="{{ t.id }}">{{ t.name }} · {{ t.city }} · {{ t.stadium_name }}</option>
-        {% endfor %}
-        </optgroup>
-        <optgroup label="DHB · División de Honor B">
-        {% for t in clubs if t.league == 'DHB' %}
-          <option value="{{ t.id }}">{{ t.name }} · {{ t.city }} · {{ t.stadium_name }}</option>
-        {% endfor %}
-        </optgroup>
-      </select>
-    </div>
-    <button class="btn primary" type="submit">Empezar</button>
   </div>
+  {% for league in ['DHA','DHB'] %}
+  <div class="section-title"><h2>{{ league }}{% if league == 'DHA' %} · División de Honor A{% else %} · División de Honor B{% endif %}</h2><span class="badge">{{ club_cards|selectattr('team.league','equalto',league)|list|length }} clubes</span></div>
+  <div class="player-grid club-grid">
+    {% for c in club_cards if c.team.league == league %}
+    <label class="player-card" style="cursor:pointer">
+      <input type="radio" name="club_id" value="{{ c.team.id }}" {% if loop.first and league == 'DHA' %}checked{% endif %} required>
+      {{ m.crest(c.team, 'crest-lg') }}
+      <div class="pc-body">
+        <div class="pc-name">{{ c.team.name }}</div>
+        <div class="pc-tags"><span class="badge">{{ c.team.league }}</span><span class="arch">{{ c.team.city }}</span></div>
+        <div class="pc-sub">{{ c.stadium }} · {{ c.expectation }}</div>
+        <div class="pc-meta"><span>Exigencia: <b>{{ c.difficulty }}</b></span><span>Academia {{ c.team.academy_rating }}/100</span></div>
+      </div>
+    </label>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="actions"><button class="btn primary" type="submit">Empezar partida</button></div>
 </form>
 </div>
 <p class="small muted">Los clubes de 1ª Andaluza no se simulan: sus jugadores están en el mercado como agentes libres.</p>

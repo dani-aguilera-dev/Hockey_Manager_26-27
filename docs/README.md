@@ -41,6 +41,8 @@
 - [`../manager/docs/04_UI_TEXTO.md`](../manager/docs/04_UI_TEXTO.md)
 - [`../manager/docs/05_ROADMAP_Y_MVP.md`](../manager/docs/05_ROADMAP_Y_MVP.md)
 - [`../manager/docs/06_MODELO_DATOS.md`](../manager/docs/06_MODELO_DATOS.md)
+- [`../manager/docs/15_WEB_ALPHA.md`](../manager/docs/15_WEB_ALPHA.md)
+- [`../manager/docs/16_DISENO_UI.md`](../manager/docs/16_DISENO_UI.md)
 
 ## Informes complementarios
 

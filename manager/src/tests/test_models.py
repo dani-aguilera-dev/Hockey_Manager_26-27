@@ -13,6 +13,14 @@ def test_auto_lineup_and_tactics():
         t.tactics.formation = formation
         line, _ = t.auto_lineup()
         assert len(line) == 11
+        assert line[0].position_group == "Portero"
+    t.tactics.formation = "4-3-3"
+    line, _ = t.auto_lineup()
+    slots = FORMATION_SLOTS["4-3-3"]
+    assert line[0].position_group == "Portero"
+    for slot, player in zip(slots[:5], line[:5]):
+        assert player.slot_fit(slot) >= 3, (slot, player.name, player.subposition)
+
     t.tactics = Tactics(mentality="ofensiva", press="alta", tempo="rapido")
     assert t.tactics.attack_mod() > 0
     assert t.tactics.fatigue_mod() > 0

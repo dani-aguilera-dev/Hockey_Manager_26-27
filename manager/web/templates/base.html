@@ -4,17 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Hockey Manager{% endblock %}</title>
+  <meta name="theme-color" content="#0b1220">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="topbar">
   <div>
     <a class="brand" href="{{ url_for('index') }}">HOCKEY <span>MANAGER</span></a>
     <div class="meta">DHA · DHB · Alpha web local</div>
   </div>
   {% if current_state %}
-  <nav class="nav">
+  <nav class="nav" aria-label="Navegación principal">
     <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('news') }}">Noticias</a>
     <a href="{{ url_for('squad') }}">Plantilla</a>
     <a href="{{ url_for('tactics') }}">Táctica</a>
     <a href="{{ url_for('training') }}">Entreno</a>
@@ -26,7 +29,7 @@
     <a href="{{ url_for('table') }}">Tabla</a>
   </nav>
   <div class="meta">
-    <b>{{ current_team.name }}</b> · {{ current_state.competition }}{% if current_state.competition == 'DHB' %} · Grupo {{ current_state.dhb_group }}{% endif %} · J{{ current_state.round }} · {{ current_state.date|fdate }}
+    <img class="top-crest" src="{{ crest_src(current_team) }}" alt="Escudo {{ current_team.name }}"><b>{{ current_team.name }}</b> · {{ current_state.competition }}{% if current_state.competition == 'DHB' %} · Grupo {{ current_state.dhb_group }}{% endif %} · J{{ current_state.round }} · {{ current_state.date|fdate }}
     <form class="inline" method="post" action="{{ url_for('save_page') }}">
       <input name="name" placeholder="nombre guardado" value="{{ session.get('save_name','') }}" size="16">
       <button class="btn small" type="submit">Guardar</button>
@@ -34,7 +37,7 @@
   </div>
   {% endif %}
 </header>
-<main class="container">
+<main class="container" id="main">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
       <div class="flash {{ category }}">{{ message }}</div>

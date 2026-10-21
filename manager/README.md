@@ -6,8 +6,9 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 
 - **Diseño:** completo en `docs/`.
 - **Datos:** 29 clubes, 16 ciudades, 976 perfiles, 37 atributos.
-- **Fase 1 (vertical slice):** implementada. Una temporada DHA jugable, con partidos en directo, gestión interna, logística, clasificación, Final Four, playout y guardado/carga.
-- **Fases 2–4:** pendientes (entrenamiento, mercado, staff, multi-temporada, DHB completa).
+- **Motor:** DHA y DHB jugables, partidos en directo, mercado, staff, entrenamiento, cantera, Copa, EHL, multi-temporada y guardado/carga.
+- **Web alpha:** Flask + Jinja con fotos de los 976 jugadores, escudos de club, noticias inmersivas y diseño responsive.
+- **Tests:** 51 superados.
 
 ## Inicio rápido
 
@@ -45,7 +46,7 @@ Pruebas:
 python3 -m pytest src/tests -q
 ```
 
-La Fase 1 incluye:
+El juego incluye:
 
 - selección de club y dossier;
 - dashboard;
@@ -65,18 +66,16 @@ La Fase 1 incluye:
 - **DHA y DHB jugables desde el inicio**, DHB real de dos fases, **agentes libres** procedentes de 1ª Andaluza, **Copa del Rey de 8 equipos DHA** y **EHL**;
 - logística con bus/tren/avión, coste y fatiga;
 - clasificación, Final Four y playout;
-- guardado/carga SQLite.
+- guardado/carga SQLite;
+- **web alpha** con dashboard, noticias, escudos, fotos, táctica visual, mercado y partido en directo.
 
-No incluye todavía:
+Pendiente:
 
-- entrenamiento semanal;
-- mercado de fichajes;
-- cantera;
-- staff;
-- prensa compleja;
-- finanzas completas con salarios;
-- liga DHB completa;
-- multi-temporada.
+- escudos oficiales con licencia (ahora hay escudos SVG estilizados);
+- guardado en mitad de un partido en directo;
+- EHL interactiva (ahora se simula);
+- descenso DHB → 1ª Andaluza (esa liga no se simula);
+- auditoría formal de accesibilidad con lector de pantalla.
 
 ## Estructura
 
@@ -132,6 +131,7 @@ manager/
 14. [`docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`](docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md) — DHB de dos fases y agentes libres.
 15. [`docs/14_TEST_ESTRESS_10_TEMPORADAS.md`](docs/14_TEST_ESTRESS_10_TEMPORADAS.md) — test de 10 temporadas con mercado y retiros.
 16. [`docs/15_WEB_ALPHA.md`](docs/15_WEB_ALPHA.md) — alpha web local con Flask.
+17. [`docs/16_DISENO_UI.md`](docs/16_DISENO_UI.md) — investigación, paleta, usabilidad, escudos y noticias.
 
 ## Datos
 
@@ -152,13 +152,11 @@ manager/
 
 ## Próximo paso
 
-Fase 2 del roadmap:
-
-1. Entrenamiento semanal y desarrollo.
-2. Moral y dinámica de grupo.
-3. Junta, objetivos y finanzas completas.
-4. Logística avanzada.
-5. Simulación de DHB para playout y ascensos reales.
+1. Probar la alpha web y pulir UX.
+2. Escudos oficiales y modo claro.
+3. EHL interactiva y descenso DHB → 1ª Andaluza.
+4. Auditoría de accesibilidad y pruebas de usuario.
+5. Publicación en GitHub privado.
 
 ## Aviso
 

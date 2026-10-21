@@ -1,5 +1,46 @@
 # Changelog
 
+## 2026-10-21 — Interfaz inmersiva, escudos y noticias
+
+### Añadido
+
+- **Escudos de club** para los 28 equipos activos (y 1ª Andaluza):
+  - 29 SVG generados desde colores, iniciales y año de fundación;
+  - soporte para sustituirlos por PNG oficiales sin tocar código;
+  - visibles en dashboard, tabla, Copa, previa, directo, parte, mercado, nuevo juego y fin de temporada.
+- **Noticias generadas** desde el estado del juego:
+  - previa, resultado, liderato, mercado, enfermería, cantera, scouting, afición, junta y Copa;
+  - ticker de última hora en el dashboard;
+  - página `/news` con escudos y fotos.
+- **Nuevo juego con fichas de club**: escudo, ciudad, estadio, exigencia y academia.
+- **Marcador visual** con escudos, posesión y contexto en previa, directo y parte.
+- **Claves del partido**: forma, goleadores, bajas y aforo previsto.
+- **Documento de diseño UI**: investigación, paleta, contraste, componentes y checklist de usabilidad en `manager/docs/16_DISENO_UI.md`.
+
+### Corregido
+
+- **Once automático:** los jugadores se elegían en orden de prioridad y luego se emparejaban con la formación por índice, lo que podía colocar un delantero como central. Ahora cada jugador se guarda en el índice de su slot y el once sale en orden de pista.
+- **Cambio de formación:** al cambiar de formación se autoalinea el once para evitar que los slots anteriores queden descolocados.
+
+### Cambiado
+
+- Paleta dark-first con **ámbar** como acción principal y **azul** como información, separando el verde semántico de éxito.
+- Contraste de texto y componentes revisado contra WCAG AA.
+- Enlace “Saltar al contenido”, foco visible, objetivos táctiles de 44 px en móvil y respeto a `prefers-reduced-motion`.
+- Navegación con Noticias y escudo del club actual.
+- Tests ampliados a **51**.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 51 tests superados.
+
+---
+
 ## 2026-10-21 — Fotos de jugadores e interfaz web más cómoda
 
 ### Añadido

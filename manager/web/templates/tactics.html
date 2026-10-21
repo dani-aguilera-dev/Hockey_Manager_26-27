@@ -24,16 +24,25 @@
   </div>
   <div class="card">
     <h3>Once actual</h3>
-    <div class="lineup-board">
-      {% for i in range(slots|length) %}{% set p = line[i] if i < line|length else None %}
-      <div class="slot-card">
-        <div class="row" style="justify-content:space-between"><span class="slot-code">{{ slots[i] }}</span>{% if p %}<span class="badge">{{ '%.1f'|format(p.overall) }}</span>{% endif %}</div>
-        {% if p %}{{ m.avatar(p) }}<div class="slot-name">{{ p.name }}</div><div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>{% endif %}
-        <select name="slot_{{i}}">
-          {% for x in slot_options[i] %}
-          <option value="{{x.id}}" {% if p and x.id==p.id %}selected{% endif %}>{{x.name}} · {{x.subposition}} · {{ '%.1f'|format(x.overall) }} · {{x.archetype}}</option>
+    <div class="lineup-pitch">
+      {% for row in slot_rows %}
+      <div class="pitch-row {{ 'single' if row.slots|length == 1 else '' }}">
+        <div class="row-label">{{ row.label }}</div>
+        <div class="pitch-slots">
+          {% for slot in row.slots %}{% set p = slot.player %}
+          <div class="slot-card {{ 'mismatch' if slot.mismatch else '' }}">
+            <div class="row" style="justify-content:space-between"><span class="slot-code">{{ slot.code }}</span>{% if p %}<span class="badge">{{ '%.1f'|format(p.overall) }}</span>{% endif %}</div>
+            {% if p %}{{ m.avatar(p) }}<div class="slot-name">{{ p.name }}</div><div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>{% endif %}
+            {% if slot.mismatch %}<div class="mismatch-badge">Fuera de posición · encaje {{ '%.1f'|format(p.slot_fit(slot.code)) if p else '—' }}</div>{% endif %}
+            <label class="sr-only" for="slot-{{ slot.index }}">Cambiar {{ slot.code }}</label>
+            <select id="slot-{{ slot.index }}" name="slot_{{ slot.index }}" aria-label="Jugador para {{ slot.code }}">
+              {% for x in slot_options[slot.index] %}
+              <option value="{{ x.id }}" {% if p and x.id==p.id %}selected{% endif %}>{{ x.name }} · {{ x.subposition }} · {{ '%.1f'|format(x.overall) }} · {{ x.archetype }}</option>
+              {% endfor %}
+            </select>
+          </div>
           {% endfor %}
-        </select>
+        </div>
       </div>
       {% endfor %}
     </div>

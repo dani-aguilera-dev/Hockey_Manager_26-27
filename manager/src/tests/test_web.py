@@ -44,18 +44,40 @@ def test_web_player_photo_and_cards(client):
 
 
 def test_web_training_and_quick_match(client):
+    import web.app as web
     _new(client, seed="11")
+    state = list(web.GAMES.values())[-1]
+    line, _ = state.user_team.auto_lineup()
     r = client.post("/training", data={"action": "auto"}, follow_redirects=True)
     assert r.status_code == 200
-    r = client.post("/tactics", data={
+    data = {
         "formation": "4-3-3", "mentality": "equilibrada", "press": "media",
         "block": "medio", "width": "normal", "tempo": "normal",
         "passing": "mixto", "pc_routine": "directa",
-    }, follow_redirects=True)
+    }
+    data.update({f"slot_{i}": p.id for i, p in enumerate(line)})
+    r = client.post("/tactics", data=data, follow_redirects=True)
     assert r.status_code == 200
+    assert len(state.manual_lineup) == 11
+    r = client.post("/tactics", data={"formation": "4-4-2"}, follow_redirects=True)
+    assert r.status_code == 200
+    assert state.manual_lineup == []
+    assert state.user_team.tactics.formation == "4-4-2"
     r = client.post("/match/quick", data={"travel": "equilibrado"}, follow_redirects=True)
     assert r.status_code == 200
     assert client.get("/match/report").status_code == 200
+
+
+def test_web_crests_and_news(client):
+    _new(client, seed="15")
+    r = client.get("/new")
+    assert r.status_code == 200
+    assert b"crests/cd-terrassa.svg" in r.data
+    assert client.get("/static/crests/cd-terrassa.svg").status_code == 200
+    r = client.get("/news")
+    assert r.status_code == 200
+    assert "Actualidad".encode() in r.data
+    assert "Noticias".encode() in r.data
 
 
 def test_web_live_match(client):

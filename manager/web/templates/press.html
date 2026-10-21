@@ -1,13 +1,33 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Prensa{% endblock %}
 {% block content %}
-<h1>Rueda de prensa</h1>
+<div class="row" style="justify-content:space-between;align-items:end">
+  <div><h1>Rueda de prensa</h1><p class="muted">Cada respuesta deja titular y mueve la moral, la junta o la afición.</p></div>
+  <div class="match-crest">{{ m.crest(team, 'crest-lg') }}<b>{{ team.name }}</b></div>
+</div>
 {% if done %}
-<div class="card"><h3>Rueda completada</h3>{% for item in state.press_history[-5:] %}<p><b>J{{ item.round }}</b> · {{ item.headline }}<br><span class="muted">{{ item.answer }}</span></p>{% endfor %}</div>
+<div class="card"><h3>Rueda completada</h3>
+{% for item in state.press_history[-5:] %}<div class="news-card"><div class="cat">J{{ item.round }}</div><h3>{{ item.headline }}</h3><p>{{ item.answer }}</p></div>{% endfor %}
+</div>
+<div class="actions"><a class="btn primary" href="{{ url_for('dashboard') }}">Volver al dashboard</a></div>
 {% else %}
-<div class="card"><form method="post">
-{% for q in questions %}<h3>{{ q.question }}</h3>{% for label,effects,headline in q.options %}<p><label><input type="radio" name="answer_{{q.id}}" value="{{ loop.index0 }}" {% if loop.first %}checked{% endif %}> {{ label }}</label></p>{% endfor %}{% endfor %}
-<button class="btn primary" type="submit">Enviar respuestas</button>
-</form></div>
+<div class="card" style="margin-bottom:14px"><p><b>Habla el entrenador.</b> La prensa espera. Tus palabras pueden proteger al grupo o aumentar la presión.</p></div>
+<form method="post">
+<div class="grid grid-2">
+{% for q in questions %}
+<div class="card press-question">
+  <div class="cat">Pregunta {{ loop.index }}</div>
+  <h3>{{ q.question }}</h3>
+    <div class="option-list">
+    {% for label,effects,headline in q.options %}
+      <label class="option-card"><input type="radio" name="answer_{{q.id}}" value="{{ loop.index0 }}" {% if loop.first %}checked{% endif %}> <span><b>{{ label }}</b><br><span class="muted small">{{ headline }}</span></span></label>
+    {% endfor %}
+    </div>
+</div>
+{% endfor %}
+</div>
+<div class="actions"><button class="btn primary" type="submit">Enviar respuestas</button></div>
+</form>
 {% endif %}
 {% endblock %}

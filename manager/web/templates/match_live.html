@@ -4,9 +4,10 @@
 {% block content %}
 <h1>Partido en directo</h1>
 <div class="card">
-  <div class="row" style="justify-content:space-between;align-items:center">
-    <div><h2 style="margin:0">{{ home.name }} <span class="muted">vs</span> {{ away.name }}</h2><p class="muted">{{ engine.quarter }}º cuarto · {{ engine.minute }}' · {{ fixture.date|fdate }}</p></div>
-    <div class="score">{{ engine.score[0] }}-{{ engine.score[1] }}</div>
+  <div class="scoreboard">
+    <div class="team">{{ m.crest(home, 'crest-lg') }}<div><h2>{{ home.name }}</h2><span class="muted">{{ engine.stats[0].possession }}% posesión</span></div></div>
+    <div><div class="score">{{ engine.score[0] }}-{{ engine.score[1] }}</div><div class="match-meta">{{ engine.quarter }}º cuarto · {{ engine.minute }}'</div></div>
+    <div class="team right"><div><h2>{{ away.name }}</h2><span class="muted">{{ engine.stats[1].possession }}% posesión</span></div>{{ m.crest(away, 'crest-lg') }}</div>
   </div>
   {% if engine.finished %}
     <form method="post" action="{{ url_for('match_live_finish') }}"><button class="btn primary" type="submit">Finalizar y ver parte</button></form>
@@ -21,6 +22,7 @@
 <div class="grid grid-2">
 <div class="card">
 <h3>Estadísticas</h3>
+<div class="possession"><span>{{ engine.stats[0].possession }}%</span><div class="bar"><div class="home" style="width:{{ engine.stats[0].possession }}%"></div><div class="away" style="width:{{ engine.stats[1].possession }}%"></div></div><span>{{ engine.stats[1].possession }}%</span></div>
 <table><tbody>
 <tr><td>Posesión</td><td class="num">{{ engine.stats[0].possession }}% - {{ engine.stats[1].possession }}%</td></tr>
 <tr><td>Tiros</td><td class="num">{{ engine.stats[0].shots }} - {{ engine.stats[1].shots }}</td></tr>
@@ -36,7 +38,7 @@
 <div class="card">
 <h3>Comentario</h3>
 <div style="max-height:420px;overflow:auto">
-{% for e in events %}<div class="event {{ e.type }}"><b>{{ e.minute }}'</b> {{ e.text }}</div>{% endfor %}
+{% for e in events %}<div class="event {{ e.type }}"><b>{{ e.minute }}'</b> {{ e.text }}</div>{% else %}<div class="event"><b>0'</b> El partido está a punto de comenzar. Avanza un cuarto o un momento para ver la primera acción.</div>{% endfor %}
 </div>
 </div>
 </div>

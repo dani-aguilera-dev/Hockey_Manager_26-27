@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Fin de temporada{% endblock %}
 {% block content %}
 <h1>Fin de temporada {{ state.season }}</h1>
@@ -7,7 +8,7 @@
 {% if summary.ehl_winner %}<p>Campeón de EHL: <b>{{ summary.ehl_winner }}</b></p>{% endif %}
 <div class="grid grid-2">
 <div class="card"><h3>Clasificación final</h3><table><thead><tr><th>#</th><th>Equipo</th><th class="num">PTS</th><th class="num">DG</th></tr></thead><tbody>
-{% for r in summary.table %}<tr><td>{{r.position}}</td><td>{{r.team}}</td><td class="num">{{r.points}}</td><td class="num">{{r.gd}}</td></tr>{% endfor %}
+{% for r in summary.table %}<tr><td>{{r.position}}</td><td>{% for t in state.teams.values() %}{% if t.name == r.team %}<img class="crest crest-sm" src="{{ crest_src(t) }}" alt="">{% endif %}{% endfor %} {{r.team}}</td><td class="num">{{r.points}}</td><td class="num">{{r.gd}}</td></tr>{% endfor %}
 </tbody></table></div>
 <div class="card"><h3>Junta y movimientos</h3>
 {% if summary.board_review %}<p>Objetivo {{summary.board_review.target}}º · Posición {{summary.board_review.position}}º · {{ 'Cumplido' if summary.board_review.met else 'No cumplido' }}</p><p>Confianza {{summary.board_review.confidence_before}} → {{summary.board_review.confidence_after}}/100</p><p class="muted">{{summary.board_review.message}}</p>{% endif %}

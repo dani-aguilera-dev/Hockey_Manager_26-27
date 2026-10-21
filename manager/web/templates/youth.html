@@ -1,12 +1,25 @@
 {% extends "base.html" %}
+{% import "macros.html" as m %}
 {% block title %}Cantera{% endblock %}
 {% block content %}
-<h1>Cantera</h1>
-<p class="muted">Academia: {{ team.academy_rating }}/100 · {{ team.youth|length }} juveniles</p>
-<div class="card"><table><thead><tr><th>Jugador</th><th>Pos</th><th class="num">Edad</th><th class="num">OVR</th><th class="num">Potencial</th><th class="num">Salario</th><th>Contrato</th><th></th></tr></thead><tbody>
-{% for p in team.youth %}<tr><td>{{ p.name }}</td><td>{{ p.subposition }}</td><td class="num">{{ p.age }}</td><td class="num">{{ '%.1f'|format(p.overall) }}</td><td class="num">{{ '%.1f'|format(p.potential) }}</td><td class="num">{{ p.salary|money }}</td><td>{{ p.contract_until }}</td><td>
-<form method="post" action="{{ url_for('youth_promote', player_id=p.id) }}" class="inline"><button class="btn primary small">Promover</button></form>
-<form method="post" action="{{ url_for('youth_release', player_id=p.id) }}" class="inline"><button class="btn danger small">Liberar</button></form>
-</td></tr>{% endfor %}
-</tbody></table></div>
+<div class="row" style="justify-content:space-between;align-items:end">
+  <div><h1>Cantera</h1><p class="muted">Academia {{ team.academy_rating }}/100 · {{ team.youth|length }} juveniles</p></div>
+  <div class="match-crest">{{ m.crest(team, 'crest-lg') }}<b>{{ team.name }}</b></div>
+</div>
+{% if team.youth %}
+<div class="player-grid squad-grid">
+{% for p in team.youth %}
+  <div class="player-card youth-card">
+    {{ m.avatar(p) }}
+    <div class="pc-body">
+      <div class="pc-name">{{ p.name }}</div>
+      <div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>
+      <div class="pc-meta"><span>{{ p.age }} años</span><span><b>{{ '%.1f'|format(p.overall) }}</b> OVR</span><span><b>{{ '%.1f'|format(p.potential) }}</b> POT</span></div>
+      <div class="pc-sub"><div class="attr-row"><span>Potencial</span><div class="attr-bar"><span style="width:{{ p.potential }}%"></span></div><b>{{ '%.0f'|format(p.potential) }}</b></div></div>
+      <div class="actions"><form method="post" action="{{ url_for('youth_promote', player_id=p.id) }}"><button class="btn primary small">Promover</button></form><form method="post" action="{{ url_for('youth_release', player_id=p.id) }}"><button class="btn danger small">Liberar</button></form></div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% else %}<div class="card"><p>No hay juveniles en la academia.</p></div>{% endif %}
 {% endblock %}

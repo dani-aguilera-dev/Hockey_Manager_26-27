@@ -47,7 +47,7 @@ python3 build_excel_attributes.py
 
 ## Manager (juego de gestión)
 
-El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. El juego ya es jugable con **DHA y DHB** desde el inicio, con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, DHB de dos fases, agentes libres, Copa del Rey, cantera, prensa, junta dinámica, logística, clasificación, Final Four, playout y guardado/carga.
+El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Football Manager. El juego ya es jugable con **DHA y DHB** desde el inicio, con partidos en directo, charla de vestuario, IA reactiva, entrenamiento semanal, staff, finanzas, mercado, contratos, multi-temporada, DHB de dos fases, agentes libres, Copa del Rey, cantera, prensa, junta dinámica, logística, clasificación, Final Four, playout y guardado/carga. La **web alpha** añade fotos reales de los 976 jugadores, escudos de club, noticias generadas y un editor de once visual.
 
 - [`manager/README.md`](manager/README.md) — índice y cómo ejecutar el juego.
 - [`manager/docs/00_VISION_Y_ARQUITECTURA.md`](manager/docs/00_VISION_Y_ARQUITECTURA.md) — arquitectura.
@@ -64,6 +64,8 @@ El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Fo
 - [`manager/docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md`](manager/docs/11_FASE3_MERCADO_Y_MULTITEMPORADA.md) — mercado, contratos y multi-temporada.
 - [`manager/docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](manager/docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
 - [`manager/docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`](manager/docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md) — DHB de dos fases y agentes libres.
+- [`manager/docs/15_WEB_ALPHA.md`](manager/docs/15_WEB_ALPHA.md) — alpha web.
+- [`manager/docs/16_DISENO_UI.md`](manager/docs/16_DISENO_UI.md) — diseño visual, paleta, escudos y usabilidad.
 
 ```bash
 cd manager && python3 run.py

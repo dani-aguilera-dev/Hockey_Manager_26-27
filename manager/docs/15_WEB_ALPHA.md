@@ -4,6 +4,8 @@
 
 La alpha web es una capa Flask + Jinja sobre el motor existente. No reescribe la lógica: usa `GameState`, `MatchEngine`, mercado, entrenamiento, Copa, EHL, cantera y persistencia.
 
+Para la investigación de color, usabilidad, escudos y componentes, ver [`16_DISENO_UI.md`](16_DISENO_UI.md).
+
 ---
 
 ## 1. Arrancar
@@ -31,12 +33,14 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 
 - Nueva partida con club DHA o DHB.
 - Carga y guardado de partidas en SQLite.
-- Dashboard con próximo partido, clasificación, caja, entrenamiento, Copa e inbox.
+- Dashboard con ticker de última hora, próximo partido, clasificación, caja, entrenamiento, Copa e inbox.
+- **Escudos de club** servidos desde `web/static/crests/` y sustituibles por PNG oficiales.
+- **Noticias generadas** desde el estado: previa, resultado, liga, mercado, enfermería, cantera, scouting, afición, junta y Copa.
 - **Fotos de los jugadores** servidas desde `jugadores/` con fallback a avatar.
 - Plantilla en fichas por posición, con foto, posición y arquetipo destacados.
 - Ficha de jugador con foto grande, badges y barras de atributos.
 - Táctica y once: pizarrón de slots con foto, posición, arquetipo, OVR y selector por puesto.
-- Mercado en fichas de jugador con foto, club, posición y arquetipo.
+- Mercado en fichas de jugador con foto, club, posición, arquetipo y escudo del propietario.
 - Entrenamiento semanal: automático, recuperación o plan editado.
 - Mercado: búsqueda, agentes libres, ofertas de traspaso, ofertas recibidas y renovaciones.
 - Staff: contratar y despedir; junta directiva.
@@ -45,7 +49,7 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - Copa del Rey de 8 equipos DHA.
 - Clasificación y calendario.
 - Partido rápido.
-- Partido en directo: cuartos, momento a momento, estadísticas, cambios y táctica.
+- Partido en directo: marcador con escudos, cuartos, momento a momento, estadísticas, cambios y táctica.
 - Fin de temporada y multi-temporada.
 
 ---
@@ -58,6 +62,9 @@ manager/
     app.py
     templates/
     static/style.css
+    static/crests/*.svg
+    static/avatar.svg
+  src/news.py
   run_web.py
 ```
 
@@ -95,6 +102,6 @@ cd manager
 python3 -m pytest src/tests -q
 ```
 
-Incluye pruebas de rutas web, nueva partida, entrenamiento, partido rápido, partido en directo y guardado/carga.
+Incluye pruebas de rutas web, nueva partida, fotos, escudos, noticias, entrenamiento, partido rápido, partido en directo y guardado/carga.
 
-Resultado actual: **50 tests superados**.
+Resultado actual: **51 tests superados**.

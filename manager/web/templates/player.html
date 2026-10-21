@@ -9,6 +9,7 @@
       <h1>{{ player.name }}</h1>
       <div class="pc-tags" style="font-size:13px">{{ m.pos(player) }} <span class="arch">{{ player.archetype }}</span> <span class="badge">{{ player.perfil }}</span></div>
       <p class="muted">{{ player.age }} años · {{ team.name }} · valor {{ player.value|money }} · salario {{ player.salary|money }} · contrato {{ player.contract_until }}</p>
+      {% if player.photo %}<p class="small muted">Foto: iSquad · datos RFEH/iSquad y modelo propio</p>{% endif %}
       <div class="row" style="gap:18px">
         <div><span class="muted small">OVR</span><div class="big-kpi">{{ '%.1f'|format(player.overall) }}</div></div>
         <div><span class="muted small">Potencial</span><div class="big-kpi">{{ '%.1f'|format(player.potential) }}</div></div>

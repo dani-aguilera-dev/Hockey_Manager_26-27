@@ -8,23 +8,26 @@
 </div>
 {% if window != 'cerrado' %}
 <div class="card"><form method="get" class="row">
+  <div class="field"><label>Buscar</label><input name="q" value="{{ query }}" placeholder="Jugador, club o arquetipo"></div>
   <div class="field"><label>Valor máximo</label><input name="max_value" value="{{ max_value }}" inputmode="numeric"></div>
   <div class="field"><label>Posición</label><select name="position"><option value="">Todas</option>{% for x in ['Portero','Central','Lateral','Medio','Delantero'] %}<option value="{{x}}" {% if position==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
   <button class="btn primary" type="submit">Buscar</button>
 </form></div>
-<div class="player-grid" style="margin-top:12px">
+<p class="muted small">{{ players|length }} jugadores encontrados{% if query %} para “{{ query }}”{% endif %}</p>
+{% if players %}<div class="player-grid market-grid" style="margin-top:12px">
 {% for p in players %}
-<div class="player-card">
+<div class="player-card market-card">
   {{ m.avatar(p) }}
   <div class="pc-body">
     <div class="pc-name">{{ p.name }}</div>
     <div class="pc-tags">{{ m.pos(p) }} <span class="arch">{{ p.archetype }}</span></div>
-    <div class="pc-meta"><span>{{ owners.get(p.id,'—') }}</span><span>{{ p.age }} años</span><span><b>{{ p.overall|round|int }}</b> OVR</span></div>
-    <div class="pc-sub">Ojeado {{ scout_range(p, team.staff_rating('scout')) }} · Precio {{ asking_price(p)|money }} · Salario {{ p.salary|money }}</div>
-    <div class="actions" style="margin-top:6px"><a class="btn small primary" href="{{ url_for('market_player', player_id=p.id) }}">Ver / ofertar</a></div>
+    <div class="pc-owner">{% set ot = owner_teams.get(p.id) %}{% if ot %}<img class="crest crest-sm" src="{{ crest_src(ot) }}" alt=""> {% endif %}{{ owners.get(p.id,'—') }}</div>
+    <div class="pc-meta"><span>{{ p.age }} años</span><span><b>{{ p.overall|round|int }}</b> OVR</span></div>
+    <div class="pc-sub"><div>Ojeado {{ scout_range(p, team.staff_rating('scout')) }}</div><div>Precio {{ asking_price(p)|money }}</div><div>Salario {{ p.salary|money }}</div></div>
+    <div class="actions"><a class="btn small primary" href="{{ url_for('market_player', player_id=p.id) }}">Ver / ofertar</a></div>
   </div>
 </div>
 {% endfor %}
-</div>
+</div>{% else %}<div class="card"><p>No hay jugadores que cumplan esos filtros. Prueba a subir el valor máximo o cambiar la posición.</p></div>{% endif %}
 {% else %}<div class="card"><p>El mercado está cerrado. Se abre antes del primer partido y en la jornada 12.</p></div>{% endif %}
 {% endblock %}
