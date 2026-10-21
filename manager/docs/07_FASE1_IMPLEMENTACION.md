@@ -22,7 +22,7 @@
 - Gestionar **finanzas**: caja, presupuesto de fichajes, salarios, patrocinio, taquilla y viajes.
 - Usar el **mercado**: buscar jugadores, hacer ofertas, renovar contratos, contratar/despedir staff y recibir ofertas.
 - Continuar **varias temporadas**, con ascensos, descensos y DHA/DHB.
-- Jugar la **Copa del Rey** a ida y vuelta, gestionar la **cantera**, responder a la **prensa** y revisar la **junta directiva**.
+- Jugar la **Copa del Rey** con los 8 mejores de DHA, gestionar la **cantera**, responder a la **prensa** y revisar la **junta directiva**.
 - Competir en la **EHL** si el club se clasifica.
 - Ver comentario textual por cuartos, estadísticas, ratings, tarjetas, lesiones y cambios.
 - Gestionar moral, cohesión, fatiga, confianza, encaje posicional y rating del mánager. La gestión otorga un bonus interno de hasta ±7 puntos.

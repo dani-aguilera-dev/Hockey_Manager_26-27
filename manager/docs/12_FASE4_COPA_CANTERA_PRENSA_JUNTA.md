@@ -6,16 +6,17 @@
 
 ## 1. Copa del Rey
 
-Formato:
+Formato oficial:
 
-- 16 equipos: los 12 DHA y los 4 mejores DHB por potencial.
-- Octavos, cuartos y semifinal a **ida y vuelta**.
-- Final a partido único.
-- En caso de empate global, shootout.
-- Sede del equipo que figure como local en el sorteo.
+- **8 equipos: los 8 mejores de DHA al terminar la primera vuelta** (jornada 11).
+- **No participan equipos de DHB.**
+- Cuartos de final, semifinal y final **a partido único**.
+- Se disputa en un fin de semana, con sede en un club DHA.
 - Empate en eliminatoria → shootout.
 - El campeón recibe **50.000 €** y confianza para la junta.
 - Si tu equipo gana, la afición sube.
+
+Clasificación: 1º vs 8º, 2º vs 7º, 3º vs 6º y 4º vs 5º.
 
 En el dashboard:
 

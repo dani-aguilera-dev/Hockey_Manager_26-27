@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-21 — Corrección del formato de la Copa del Rey
+
+### Corregido
+
+- La Copa del Rey ya no incluye equipos de DHB.
+- Participan los **8 mejores de DHA al terminar la primera vuelta** (jornada 11).
+- Formato correcto:
+  - cuartos de final, semifinal y final;
+  - a partido único;
+  - en un fin de semana;
+  - empate resuelto por shootout.
+- El cuadro se genera 1º vs 8º, 2º vs 7º, 3º vs 6º y 4º vs 5º.
+- Se eliminó el formato incorrecto de 16 equipos con ida y vuelta.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 45 tests superados.
+
+---
+
 ## 2026-10-21 — DHB jugable desde el inicio
 
 ### Añadido

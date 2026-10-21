@@ -123,7 +123,7 @@ Añade:
 
 ### Fase 5 — Mundo completo
 
-**Estado parcial:** Fase 5A implementada (2026-10-21): DHB real de dos fases, agentes libres de 1ª Andaluza, Copa a ida y vuelta y EHL. Ver `13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`. Queda el descenso DHB → 1ª Andaluza y el sorteo de Copa con cabezas de serie.
+**Estado parcial:** Fase 5A implementada (2026-10-21): DHB real de dos fases, agentes libres de 1ª Andaluza, Copa del Rey de 8 equipos DHA y EHL. Ver `13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`. Queda el descenso DHB → 1ª Andaluza y el sorteo de Copa con cabezas de serie.
 
 ### Fase 4 — Profundidad y pulido
 

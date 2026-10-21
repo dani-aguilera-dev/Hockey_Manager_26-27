@@ -11,10 +11,10 @@ def test_cup_bracket_and_rounds():
     new_cup(state)
     assert state.cup_active
     assert state.cup_round == 1
-    assert len(cup_round_fixtures(state)) == 16
+    assert len(cup_round_fixtures(state)) == 4
     simulate_cup_round(state)
     assert state.cup_round == 2
-    assert len(cup_round_fixtures(state)) == 8
+    assert len(cup_round_fixtures(state)) == 2
     simulate_cup_remaining(state)
     assert not state.cup_active
     assert state.cup_winner_id in state.teams
