@@ -76,7 +76,9 @@ La pestaña **Mercado** muestra jugadores de todos los clubes de DHA/DHB y agent
 - descripción e historia del club;
 - ciudad, estadio, aforo, colores, instalaciones y academia;
 - posición y estadísticas de temporada;
-- plantilla completa con PJ, goles, asistencias y rating;
+- **once probable** con formación, fotos reales, posición y arquetipo;
+- banquillo probable con caras;
+- plantilla completa con foto, PJ, goles, asistencias y rating;
 - últimos resultados y próximos partidos;
 - acceso al mercado filtrado por ese club.
 

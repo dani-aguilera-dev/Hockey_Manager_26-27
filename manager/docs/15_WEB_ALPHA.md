@@ -37,7 +37,7 @@ HOCKEY_WEB_DB=/ruta/web.db python3 run_web.py
 - **Diario del club** con entrenamientos, lesiones, mercado, noticias de DHA/DHB y conversaciones.
 - **Vestuario** con chat y respuestas que afectan a moral, forma o cohesión.
 - **Mercado abierto por fechas** (verano hasta el 30/09 e invierno en enero) y listado visible incluso cerrado.
-- **Perfiles de equipo** y **histórico de jugadores** por temporada.
+- **Perfiles de equipo** con once probable y banquillo con fotos reales, y **histórico de jugadores** por temporada.
 - **Menú de juego global** en todas las pantallas: continuar, guardar, cargar, volver, menú principal, nueva partida y salida con guardado automático.
 - **Opciones**: tamaño de texto normal/grande, modo compacto y confirmación al salir.
 - **Menú principal** con partida en curso, guardado rápido y partidas recientes.

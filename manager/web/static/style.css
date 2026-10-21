@@ -269,3 +269,6 @@ body.compact .player-card,body.compact .slot-card{padding:8px}
 .daily-event{border-left:3px solid var(--accent2)}
 .chat-message{border-left:3px solid var(--warn)}
 .chat-message.answered{border-left-color:var(--line)}
+
+.avatar-table{width:42px;height:42px;flex-basis:42px;border-radius:11px}
+.avatar-table .avatar-initials{font-size:12px}

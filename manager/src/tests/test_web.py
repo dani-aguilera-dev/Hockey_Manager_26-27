@@ -102,7 +102,9 @@ def test_web_daily_calendar_teams_and_chat(client):
     assert r.status_code == 200
     assert state.date != "2026-08-01"
     assert client.get("/news").status_code == 200
-    assert client.get("/team/atletic-terrassa").status_code == 200
+    team_html = client.get("/team/atletic-terrassa").get_data(as_text=True)
+    assert "Once probable" in team_html
+    assert "avatar-table" in team_html
     state.date = "2026-10-01"
     market_html = client.get("/market").get_data(as_text=True)
     assert "Mercado cerrado" in market_html

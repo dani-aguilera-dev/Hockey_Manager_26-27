@@ -12,7 +12,7 @@
 - **Mercado por fechas**: verano hasta el 30/09 e invierno del 1 al 31 de enero; el primer partido ya no lo cierra.
 - **Mercado siempre consultable**: muestra jugadores de todos los clubes y agentes libres aunque esté cerrado.
 - Filtro por club y estadísticas de temporada en las fichas de mercado.
-- **Perfil de equipo** con historia, estadio, instalaciones, clasificación, plantilla, resultados y próximos partidos.
+- **Perfil de equipo** con historia, estadio, instalaciones, clasificación, once probable con fotos, banquillo, plantilla con caras, resultados y próximos partidos.
 - **Histórico de jugadores** por temporada y club, conservado en traspasos y visible en la ficha.
 - Enlaces a perfiles desde la clasificación, el dashboard y el mercado.
 - Documento `manager/docs/18_SIMULACION_DIARIA_Y_SCOUTING.md`.

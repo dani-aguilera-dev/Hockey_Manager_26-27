@@ -535,11 +535,14 @@ def team_detail(team_id):
                       key=lambda f: (f.date, f.round))
     played = [f for f in fixtures if f.played][-5:]
     upcoming = [f for f in fixtures if not f.played][:5]
+    probable_line, probable_bench = selected.auto_lineup()
     ctx = state_context(state)
     ctx.update({
         "selected_team": selected, "club": club, "team_position": position, "team_group": team_group,
         "team_table": table, "team_fixtures": fixtures, "team_played": played,
-        "team_upcoming": upcoming,
+        "team_upcoming": upcoming, "probable_line": probable_line,
+        "probable_bench": probable_bench, "probable_rows": lineup_rows(selected, probable_line),
+        "probable_formation": selected.tactics.formation,
         "team_players": sorted(selected.players, key=lambda p: (p.position_group, -p.overall)),
     })
     return render_template("team.html", **ctx)
