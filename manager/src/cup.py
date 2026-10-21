@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from .models import GameState, Fixture, TeamState
 
 CUP_OFFSETS = [216, 217, 218]
-ROUND_NAMES = {1: "Cuartos", 2: "Semifinal", 3: "Final"}
+ROUND_NAMES = {1: "Cuartos", 2: "Semifinal", 3: "Final y 3º puesto"}
 ROUND_PHASES = {1: "cup_qf", 2: "cup_sf", 3: "cup_final"}
 
 
@@ -49,11 +49,14 @@ def new_cup(state: GameState) -> None:
     state.cup_round = 1
     state.cup_active = True
     state.cup_winner_id = ""
+    state.cup_third_id = ""
 
 
 def cup_round_fixtures(state: GameState) -> list[Fixture]:
     if not state.cup_active or state.cup_round not in ROUND_PHASES:
         return []
+    if state.cup_round == 3:
+        return [f for f in state.fixtures if f.phase in (ROUND_PHASES[3], "cup_third")]
     phase = ROUND_PHASES[state.cup_round]
     return [f for f in state.fixtures if f.phase == phase]
 

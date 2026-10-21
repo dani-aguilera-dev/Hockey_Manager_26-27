@@ -92,7 +92,7 @@ Resultado actual: **45 tests superados**.
 
 - **8 equipos: los 8 mejores de DHA al acabar la primera vuelta.**
 - **La DHB no participa.**
-- Cuartos, semifinal y final a partido único en un fin de semana.
+- Cuartos, semifinal, tercer/cuarto puesto y final a partido único en un fin de semana.
 - Empate → shootout.
 - El campeón recibe 50.000 € y confianza para la junta.
 - La Copa no cuenta para la clasificación de liga.

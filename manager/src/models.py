@@ -509,6 +509,7 @@ class GameState:
     cup_round: int = 0
     cup_active: bool = False
     cup_winner_id: str = ""
+    cup_third_id: str = ""
     press_done_round: int = 0
     press_history: list[dict[str, Any]] = field(default_factory=list)
     board_review: dict[str, Any] = field(default_factory=dict)
@@ -583,6 +584,7 @@ class GameState:
             "cup_round": self.cup_round,
             "cup_active": self.cup_active,
             "cup_winner_id": self.cup_winner_id,
+            "cup_third_id": self.cup_third_id,
             "press_done_round": self.press_done_round,
             "press_history": self.press_history,
             "board_review": self.board_review,
@@ -618,6 +620,7 @@ class GameState:
             relegated_ids=d.get("relegated_ids", []),
             cup_round=d.get("cup_round", 0), cup_active=d.get("cup_active", False),
             cup_winner_id=d.get("cup_winner_id", ""),
+            cup_third_id=d.get("cup_third_id", ""),
             press_done_round=d.get("press_done_round", 0),
             press_history=d.get("press_history", []),
             board_review=d.get("board_review", {}),

@@ -10,7 +10,7 @@ Formato oficial:
 
 - **8 equipos: los 8 mejores de DHA al terminar la primera vuelta** (jornada 11).
 - **No participan equipos de DHB.**
-- Cuartos de final, semifinal y final **a partido único**.
+- Cuartos de final, semifinal, **tercer/cuarto puesto** y final **a partido único**.
 - Se disputa en un fin de semana, con sede en un club DHA.
 - Empate en eliminatoria → shootout.
 - El campeón recibe **50.000 €** y confianza para la junta.

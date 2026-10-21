@@ -530,7 +530,7 @@ def _background_table(state: GameState, league: str) -> list[dict]:
 
 
 def simulate_cup_round(state: GameState, user_lineup_ids: list[str] | None = None) -> dict | None:
-    """Simula cuartos, semifinal o final de Copa a partido único."""
+    """Simula cuartos, semifinal o final/tercer puesto a partido único."""
     if not state.cup_active:
         return None
     fixtures = cup_round_fixtures(state)
@@ -539,45 +539,65 @@ def simulate_cup_round(state: GameState, user_lineup_ids: list[str] | None = Non
     current_round = state.cup_round
     payload = None
     winners = []
+    losers = []
     for idx, fx in enumerate(fixtures):
         if fx.played:
-            winners.append(fx.home_id if fx.home_goals > fx.away_goals else fx.away_id)
+            home_won = fx.home_goals > fx.away_goals
+            winners.append(fx.home_id if home_won else fx.away_id)
+            losers.append(fx.away_id if home_won else fx.home_id)
             continue
         rng = random.Random(state.seed + current_round * 300 + idx)
         is_user = state.club_id in (fx.home_id, fx.away_id)
         line, bench = make_lineup(state.user_team, user_lineup_ids if user_lineup_ids is not None else (state.manual_lineup or None)) if is_user else (None, None)
         res = _simulate_fixture(state, fx, rng, user_lineup=line, user_bench=bench, neutral=False, knockout=True)
-        winner = res.shootout.get("winner_id") if res.shootout else (fx.home_id if fx.home_goals > fx.away_goals else fx.away_id)
+        home_won = res.shootout.get("winner_id") == fx.home_id if res.shootout else fx.home_goals > fx.away_goals
+        winner = fx.home_id if home_won else fx.away_id
+        loser = fx.away_id if home_won else fx.home_id
         winners.append(winner)
+        losers.append(loser)
         if is_user:
             payload = _user_result_payload(state, fx, res, fx.travel)
             state.last_result = payload
-    if current_round < 3:
-        next_round = current_round + 1
-        next_phase = ROUND_PHASES[next_round]
+    if current_round == 1:
+        next_phase = ROUND_PHASES[2]
         from datetime import date as _date
-        base = cup_start(state).toordinal() + CUP_OFFSETS[next_round - 1]
+        base = cup_start(state).toordinal() + CUP_OFFSETS[1]
         for i in range(0, len(winners), 2):
             state.fixtures.append(Fixture(
-                id=f"C{next_round}-{i//2+1}", round=100 + next_round,
-                date=_date.fromordinal(base).isoformat(),
+                id=f"C2-{i//2+1}", round=102, date=_date.fromordinal(base).isoformat(),
                 home_id=winners[i], away_id=winners[i + 1], phase=next_phase,
             ))
-        state.cup_round = next_round
+        state.cup_round = 2
+    elif current_round == 2:
+        from datetime import date as _date
+        base = cup_start(state).toordinal() + CUP_OFFSETS[2]
+        date_s = _date.fromordinal(base).isoformat()
+        state.fixtures.append(Fixture(
+            id="C3-F", round=103, date=date_s, home_id=winners[0], away_id=winners[1], phase=ROUND_PHASES[3],
+        ))
+        state.fixtures.append(Fixture(
+            id="C3-T", round=103, date=date_s, home_id=losers[0], away_id=losers[1], phase="cup_third",
+        ))
+        state.cup_round = 3
     else:
-        winner = winners[0] if winners else ""
-        state.cup_winner_id = winner
+        final = next((f for f in fixtures if f.phase == ROUND_PHASES[3]), None)
+        third = next((f for f in fixtures if f.phase == "cup_third"), None)
+        if final:
+            winner = final.home_id if final.home_goals > final.away_goals else final.away_id
+            if final.home_goals == final.away_goals:
+                winner = state.seed % 2 == 0 and final.home_id or final.away_id
+            state.cup_winner_id = winner
+            if winner in state.teams:
+                state.teams[winner].budget += 50000
+                state.teams[winner].board_confidence = min(100, state.teams[winner].board_confidence + 4)
+            if winner == state.club_id:
+                state.user_team.fan_confidence = min(100, state.user_team.fan_confidence + 8)
+                state.inbox.append({"date": state.date, "from": "Prensa", "subject": "¡Campeón de Copa!",
+                                    "body": "El club ha ganado la Copa del Rey. La afición está eufórica."})
+        if third:
+            state.cup_third_id = third.home_id if third.home_goals > third.away_goals else third.away_id
         state.cup_active = False
-        if winner in state.teams:
-            state.teams[winner].budget += 50000
-            state.teams[winner].board_confidence = min(100, state.teams[winner].board_confidence + 4)
-        if winner == state.club_id:
-            state.user_team.fan_confidence = min(100, state.user_team.fan_confidence + 8)
-            state.inbox.append({"date": state.date, "from": "Prensa", "subject": "¡Campeón de Copa!",
-                                "body": "El club ha ganado la Copa del Rey. La afición está eufórica."})
     return payload
-
-
 def simulate_cup_remaining(state: GameState) -> None:
     while state.cup_active:
         simulate_cup_round(state)
@@ -976,6 +996,7 @@ def season_summary(state: GameState) -> dict:
         "promoted": promoted_names,
         "relegated": relegated_names,
         "cup_winner": state.teams[state.cup_winner_id].name if state.cup_winner_id in state.teams else None,
+        "cup_third": state.teams[state.cup_third_id].name if state.cup_third_id in state.teams else None,
         "ehl_winner": state.ehl.get("winner_name", "") if state.ehl else None,
         "ehl_participants": state.ehl.get("participants", []) if state.ehl else [],
         "retirements": state.retirements,

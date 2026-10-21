@@ -1293,6 +1293,8 @@ class GameUI:
         header(f"FIN DE TEMPORADA · {s.season}")
         print(f"Campeón de {summ.get('competition', s.competition)}: {summ.get('champion') or '—'}")
         print(f"Campeón de Copa: {summ.get('cup_winner') or '—'}")
+        if summ.get("cup_third"):
+            print(f"Tercer puesto de Copa: {summ.get('cup_third')}")
         print(f"Campeón de EHL: {summ.get('ehl_winner') or '—'}")
         print(f"Tu club: {s.user_team.name} · Posición: {summ.get('user_position')}º/{len(summ.get('table', []))}")
         mg = s.user_team.management_profile()

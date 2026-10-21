@@ -7,7 +7,7 @@
 - La Copa del Rey ya no incluye equipos de DHB.
 - Participan los **8 mejores de DHA al terminar la primera vuelta** (jornada 11).
 - Formato correcto:
-  - cuartos de final, semifinal y final;
+  - cuartos de final, semifinal, tercer/cuarto puesto y final;
   - a partido único;
   - en un fin de semana;
   - empate resuelto por shootout.
