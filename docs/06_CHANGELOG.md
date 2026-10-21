@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-21 — Fotos reales también en partidas antiguas
+
+### Corregido
+
+- Las partidas guardadas antes de añadir las fotos ya no muestran iniciales: al cargarlas se rellenan automáticamente las fotos locales de iSquad por id y, si hace falta, por equipo + nombre.
+- La retrocarga cubre jugadores de todos los equipos y agentes libres.
+- Se evita cargar datos de clubes en cada petición cuando la partida ya está completa.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 59 tests superados.
+
+---
+
 ## 2026-10-21 — Simulación diaria, vestuario, scouting y perfiles
 
 ### Añadido

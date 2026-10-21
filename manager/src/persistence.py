@@ -66,6 +66,8 @@ def list_saves(path: Path | str = DEFAULT_DB) -> list[dict]:
 
 def _backfill_communities(state: GameState) -> None:
     """Rellena la comunidad en partidas antiguas sin reescribir sus datos."""
+    if all(team.community for team in state.teams.values()):
+        return
     try:
         from .data_loader import load_clubs
         clubs, _ = load_clubs()
@@ -74,6 +76,44 @@ def _backfill_communities(state: GameState) -> None:
     for team_id, team in state.teams.items():
         if not team.community:
             team.community = clubs.get(team_id, {}).get("community", "")
+
+
+def _backfill_media(state: GameState) -> None:
+    """Rellena fotos en partidas antiguas creadas antes de guardar media."""
+    if not any(not p.photo for t in state.teams.values() for p in t.players) and not any(not p.photo for p in state.free_agents):
+        return
+    try:
+        from .data_loader import load_teams
+        teams, _, _ = load_teams()
+    except Exception:
+        return
+    by_id: dict[str, tuple[str, str]] = {}
+    by_name: dict[tuple[str, str], tuple[str, str]] = {}
+    for team in teams.values():
+        for player in team.players:
+            media = (player.photo, player.photo_remote)
+            by_id[player.id] = media
+            by_name[(team.name.casefold(), player.name.casefold())] = media
+    for team in state.teams.values():
+        for player in team.players + team.youth:
+            if player.photo:
+                continue
+            media = by_id.get(player.id) or by_name.get((team.name.casefold(), player.name.casefold()))
+            if media:
+                player.photo, player.photo_remote = media
+    for player in state.free_agents:
+        if player.photo:
+            continue
+        media = by_id.get(player.id) or by_name.get((player.team_name.casefold(), player.name.casefold()))
+        if media:
+            player.photo, player.photo_remote = media
+
+
+def backfill_state(state: GameState) -> GameState:
+    """Compatibilidad con partidas guardadas antes de comunidad/fotos."""
+    _backfill_communities(state)
+    _backfill_media(state)
+    return state
 
 
 def load_game(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> GameState:
@@ -89,6 +129,7 @@ def load_game(name_or_id: str | int, path: Path | str = DEFAULT_DB) -> GameState
         raise KeyError(f"No existe la partida: {name_or_id}")
     state = GameState.from_dict(json.loads(row[0]))
     _backfill_communities(state)
+    _backfill_media(state)
     return state
 
 
@@ -115,4 +156,5 @@ def export_json(state: GameState, path: Path | str) -> Path:
 def import_json(path: Path | str) -> GameState:
     state = GameState.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
     _backfill_communities(state)
+    _backfill_media(state)
     return state

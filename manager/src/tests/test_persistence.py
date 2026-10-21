@@ -30,6 +30,20 @@ def test_sqlite_roundtrip():
         assert len(loaded.teams) == len(state.teams)
 
 
+def test_old_save_backfills_player_photos():
+    state = new_game("cd-terrassa", "Test", seed=90)
+    for team in state.teams.values():
+        for player in team.players:
+            player.photo = ""
+            player.photo_remote = ""
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "old.db"
+        save_game(state, "old-save", db)
+        loaded = load_game("old-save", db)
+        assert any(player.photo for team in loaded.teams.values() for player in team.players)
+        assert loaded.user_team.players[0].photo
+
+
 def test_training_state_roundtrip():
     state = new_game("cd-terrassa", "Test", seed=88)
     ensure_week_training(state)

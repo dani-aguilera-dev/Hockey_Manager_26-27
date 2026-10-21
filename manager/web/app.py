@@ -26,7 +26,7 @@ from src.market import (STAFF_LABELS, accept_incoming_offer, asking_price,
                         renew_contract, scout_range, staff_candidates)
 from src.models import FORMATION_SLOTS
 from src.news import news_feed
-from src.persistence import list_saves, load_game, save_game
+from src.persistence import backfill_state, list_saves, load_game, save_game
 from src.press import answer_press, mark_press_done, press_questions
 from src.season import (advance_to_next_season, ensure_week_training,
                         finish_live_round, make_lineup, new_game, play_round,
@@ -61,6 +61,7 @@ def get_state():
         except Exception:
             return None
         GAMES[gid] = state
+    backfill_state(state)
     return state
 
 
