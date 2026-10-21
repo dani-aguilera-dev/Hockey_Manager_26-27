@@ -82,7 +82,7 @@ def _contract_until(start_year: int, years: int) -> str:
 
 
 def _club_value(player: PlayerState) -> int:
-    age_factor = 1.15 if player.age <= 24 else (1.0 if player.age <= 29 else (0.65 if player.age <= 32 else 0.35))
+    age_factor = 1.25 if player.age <= 24 else (1.0 if player.age <= 29 else (0.70 if player.age <= 32 else (0.45 if player.age <= 34 else 0.25)))
     base = int((max(1, player.overall - 40) ** 2) * 180 * age_factor)
     return max(int(player.value * 1.10), base, 50000)
 
@@ -113,6 +113,9 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
         return {"ok": False, "message": f"{seller.name} no quiere quedarse sin efectivos."}
     if fee < 0 or salary <= 0 or years < 1:
         return {"ok": False, "message": "Oferta no válida."}
+    minimum_salary = int(max(5000, (player.overall - 45) * 900))
+    if salary < minimum_salary and not free_agent:
+        return {"ok": False, "message": f"{player.name} pide al menos {minimum_salary:,} € de salario.".replace(",", ".")}
     if fee > buyer.transfer_budget:
         return {"ok": False, "message": f"No tienes presupuesto de fichajes suficiente ({fee:,} €).".replace(",", ".")}
     rng = rng or _rng(state, zlib.crc32(player_id.encode("utf-8")) % 1000)
@@ -154,7 +157,8 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
     if seller:
         seller.budget += int(fee)
     entry = {
-        "type": "transferencia", "round": state.round, "player": player.name,
+        "type": "transferencia", "round": state.round, "season": state.season,
+        "player": player.name, "overall": round(player.overall, 1),
         "from": seller.name if seller else "Agente libre", "to": buyer.name, "fee": int(fee), "salary": int(salary),
     }
     state.market_history.append(entry)
@@ -163,11 +167,11 @@ def make_transfer_offer(state: GameState, player_id: str, fee: int, salary: int,
 
 
 def _ai_market_activity(state: GameState, rng: random.Random) -> None:
-    """Movimientos sencillos entre clubes IA para que el mercado no sea solo del usuario."""
+    """Movimientos entre clubes IA con presupuesto y salario coherentes."""
     teams = [t for t in state.teams.values() if t.league in ("DHA", "DHB") and t.id != state.club_id]
     if len(teams) < 4:
         return
-    for _ in range(2):
+    for _ in range(3):
         buyer, seller = rng.sample(teams, 2)
         if len(seller.players) <= 17:
             continue
@@ -175,17 +179,26 @@ def _ai_market_activity(state: GameState, rng: random.Random) -> None:
         if not candidates:
             continue
         player = rng.choice(candidates)
-        fee = int(_club_value(player) * rng.uniform(0.75, 1.15))
+        fee = int(_club_value(player) * rng.uniform(0.90, 1.20))
+        if buyer.transfer_budget < fee:
+            continue
+        salary = int(max(player.salary * rng.uniform(1.10, 1.30), (player.overall - 45) * 900))
         seller.players.remove(player)
         buyer.players.append(player)
         player.team_name = buyer.name
-        player.salary = int(player.salary * rng.uniform(1.05, 1.25))
+        player.salary = salary
+        player.contract_until = _contract_until(int(state.season[:4]), rng.randint(2, 4))
+        buyer.transfer_budget -= fee
         seller.budget += fee
         player.apps = player.season_goals = player.season_assists = 0
         player.rating_sum = 0.0
+        player.fatigue = 0
+        player.injury = 0
+        player.suspension = 0
         state.market_history.append({
-            "type": "IA", "round": state.round, "player": player.name,
-            "from": seller.name, "to": buyer.name, "fee": fee, "salary": player.salary,
+            "type": "IA", "round": state.round, "season": state.season,
+            "player": player.name, "overall": round(player.overall, 1),
+            "from": seller.name, "to": buyer.name, "fee": fee, "salary": salary,
         })
 
 
@@ -207,7 +220,9 @@ def generate_incoming_offers(state: GameState, rng: random.Random | None = None)
             continue
         buyer = rng.choice(buyers)
         fee = int(_club_value(p) * rng.uniform(0.85, 1.25))
-        salary = int(p.salary * rng.uniform(1.15, 1.55))
+        if buyer.transfer_budget < fee:
+            continue
+        salary = int(max(p.salary * rng.uniform(1.15, 1.55), (p.overall - 45) * 900))
         offers.append({
             "id": f"OF{state.round}-{i+1}", "player_id": p.id, "player_name": p.name,
             "from_club_id": buyer.id, "from_club_name": buyer.name,
@@ -229,16 +244,20 @@ def accept_incoming_offer(state: GameState, offer_id: str) -> dict[str, Any]:
     player = next((p for p in user.players if p.id == offer["player_id"]), None)
     if not buyer or not player:
         return {"ok": False, "message": "La oferta ya no es válida."}
+    if buyer.transfer_budget < int(offer["fee"]):
+        return {"ok": False, "message": "El club comprador ya no tiene presupuesto suficiente."}
     user.players.remove(player)
     buyer.players.append(player)
     player.team_name = buyer.name
-    player.salary = int(offer["salary"])
+    player.salary = int(max(offer["salary"], (player.overall - 45) * 900))
     player.contract_until = _contract_until(int(state.season[:4]), int(offer["years"]))
     player.apps = player.season_goals = player.season_assists = 0
     player.rating_sum = 0.0
+    buyer.transfer_budget -= int(offer["fee"])
     user.budget += int(offer["fee"])
     state.market_history.append({
-        "type": "venta", "round": state.round, "player": player.name,
+        "type": "venta", "round": state.round, "season": state.season,
+        "player": player.name, "overall": round(player.overall, 1),
         "from": user.name, "to": buyer.name, "fee": int(offer["fee"]), "salary": int(offer["salary"]),
     })
     state.transfer_offers = [o for o in state.transfer_offers if o.get("id") != offer_id]
@@ -270,7 +289,8 @@ def renew_contract(state: GameState, player_id: str, salary: int, years: int,
     player.salary = int(salary)
     player.contract_until = _contract_until(int(state.season[:4]), years)
     state.market_history.append({
-        "type": "renovacion", "round": state.round, "player": player.name,
+        "type": "renovacion", "round": state.round, "season": state.season,
+        "player": player.name, "overall": round(player.overall, 1),
         "from": team.name, "to": team.name, "fee": 0, "salary": int(salary),
     })
     return {"ok": True, "message": f"{player.name} renueva hasta {player.contract_until}."}

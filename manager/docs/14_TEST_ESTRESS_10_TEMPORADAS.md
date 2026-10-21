@@ -132,7 +132,25 @@ Se registraron **29 retiradas** en 10 temporadas. Algunas destacadas:
 
 ---
 
-## 6. Conclusión
+## 6. Test con el mercado real del juego
+
+Además del test de estrés con movimientos directos, ejecuté otro de 10 temporadas usando las funciones reales del juego:
+
+- `generate_incoming_offers`
+- `accept_incoming_offer`
+- `make_transfer_offer`
+
+Resultado:
+
+- **17 movimientos registrados** (el mercado real es más selectivo que el test de estrés).
+- Venta más cara: **Aleix Vericat Torres**, CD Terrassa → Atlètic Terrassa, **493.896 €**.
+- El club del usuario fue campeón de DHA en **2035-36**.
+- **34 retiradas** en 10 temporadas.
+- Sin errores.
+
+Esto confirma que los clubes IA ya respetan mejor su presupuesto y que las estrellas no se malvenden con tanta facilidad.
+
+## 7. Conclusión
 
 El núcleo aguanta **10 temporadas con mercado, retiradas, Copa, EHL, cantera y DHB**. No hay errores de ejecución.
 

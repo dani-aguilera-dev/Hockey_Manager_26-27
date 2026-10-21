@@ -19,8 +19,9 @@
 
 ### Resultado
 
-- 41 movimientos de mercado.
-- 29 retiradas.
+- 41 movimientos en el test de estrés y 17 en el test con el mercado real.
+- 29 retiradas en el test de estrés y 34 en el test real.
+- Venta récord: 493.896 €.
 - 10 temporadas sin errores.
 - DHA/DHB estables y plantillas de al menos 18 jugadores.
 

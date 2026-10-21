@@ -884,6 +884,11 @@ def _process_age_and_retirements(state: GameState) -> None:
                 chance = 0.03
             if p.overall < 58 and p.age >= 30:
                 chance += 0.05
+            # Las estrellas cuidan más su carrera y se retiran algo más tarde.
+            if p.overall >= 85:
+                chance *= 0.50
+            elif p.overall >= 78:
+                chance *= 0.75
             if rng.random() < chance:
                 state.retirements.append({
                     "season": state.season, "player": p.name, "club": team.name,
