@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Parte del partido{% endblock %}
+{% block content %}
+<h1>{{ p.home_name }} {{ p.home_goals }}-{{ p.away_goals }} {{ p.away_name }}</h1>
+<p class="muted">{{ p.date|fdate }} · Jornada {{ p.round }} · {{ p.result }}</p>
+<div class="grid grid-2">
+<div class="card"><h3>Comentario</h3><div style="max-height:480px;overflow:auto">
+{% for e in p.events if e.type in ['goal','pc','stroke','save','card','injury','substitution','chance','circle_entry','talk','tactic'] %}<div class="event {{e.type}}"><b>{{e.minute}}'</b> {{e.text}}</div>{% endfor %}
+</div></div>
+<div class="card"><h3>Estadísticas</h3><table><tbody>
+<tr><td>Posesión</td><td class="num">{{p.home_stats.possession}}% - {{p.away_stats.possession}}%</td></tr>
+<tr><td>Tiros</td><td class="num">{{p.home_stats.shots}} - {{p.away_stats.shots}}</td></tr>
+<tr><td>Tiros a puerta</td><td class="num">{{p.home_stats.shots_on_target}} - {{p.away_stats.shots_on_target}}</td></tr>
+<tr><td>PC</td><td class="num">{{p.home_stats.pc}} - {{p.away_stats.pc}}</td></tr>
+<tr><td>Goles PC</td><td class="num">{{p.home_stats.pc_goals}} - {{p.away_stats.pc_goals}}</td></tr>
+<tr><td>Paradas</td><td class="num">{{p.home_stats.saves}} - {{p.away_stats.saves}}</td></tr>
+</tbody></table>
+<h3 style="margin-top:16px">Ratings</h3>{% for n,r in p.ratings.items() %}<p class="small">{{n}}: <b>{{'%.2f'|format(r)}}</b></p>{% endfor %}
+</div>
+</div>
+<div class="actions"><a class="btn primary" href="{{ url_for('dashboard') }}">Volver al dashboard</a><a class="btn" href="{{ url_for('table') }}">Clasificación</a></div>
+{% endblock %}

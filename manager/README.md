@@ -11,11 +11,21 @@ Diseño y prototipo de un juego de **entrenador y gestión de club** de hockey h
 
 ## Inicio rápido
 
-Desde `manager/`:
+Juego de terminal:
 
 ```bash
+cd /home/daniel/hockey_espana/manager
 python3 run.py
 ```
+
+Alpha web local:
+
+```bash
+cd /home/daniel/hockey_espana/manager
+python3 run_web.py
+```
+
+Abre `http://127.0.0.1:5000`.
 
 Modo interactivo con una base de datos alternativa:
 
@@ -121,6 +131,7 @@ manager/
 13. [`docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md`](docs/12_FASE4_COPA_CANTERA_PRENSA_JUNTA.md) — Copa, cantera, prensa y junta.
 14. [`docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md`](docs/13_FASE5A_DHB_REAL_Y_AGENTES_LIBRES.md) — DHB de dos fases y agentes libres.
 15. [`docs/14_TEST_ESTRESS_10_TEMPORADAS.md`](docs/14_TEST_ESTRESS_10_TEMPORADAS.md) — test de 10 temporadas con mercado y retiros.
+16. [`docs/15_WEB_ALPHA.md`](docs/15_WEB_ALPHA.md) — alpha web local con Flask.
 
 ## Datos
 

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Nueva partida{% endblock %}
+{% block content %}
+<h1>Nueva partida</h1>
+<div class="card">
+<form method="post">
+  <div class="row">
+    <div class="field"><label>Entrenador</label><input name="manager" value="Entrenador" required></div>
+    <div class="field"><label>Semilla (opcional)</label><input name="seed" inputmode="numeric" placeholder="aleatoria"></div>
+    <div class="field wide"><label>Club</label>
+      <select name="club_id" required>
+        <optgroup label="DHA · División de Honor A">
+        {% for t in clubs if t.league == 'DHA' %}
+          <option value="{{ t.id }}">{{ t.name }} · {{ t.city }} · {{ t.stadium_name }}</option>
+        {% endfor %}
+        </optgroup>
+        <optgroup label="DHB · División de Honor B">
+        {% for t in clubs if t.league == 'DHB' %}
+          <option value="{{ t.id }}">{{ t.name }} · {{ t.city }} · {{ t.stadium_name }}</option>
+        {% endfor %}
+        </optgroup>
+      </select>
+    </div>
+    <button class="btn primary" type="submit">Empezar</button>
+  </div>
+</form>
+</div>
+<p class="small muted">Los clubes de 1ª Andaluza no se simulan: sus jugadores están en el mercado como agentes libres.</p>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }}{% endblock %}
+{% block content %}
+<h1>{{ player.name }}</h1>
+<p class="muted">{{ player.subposition }} · {{ player.age }} años · {{ player.archetype }} · {{ player.perfil }}</p>
+<div class="grid grid-3">
+  <div class="card"><h3>Rendimiento</h3><p>Overall <b>{{ '%.1f'|format(player.overall) }}</b> · Potencial {{ '%.1f'|format(player.potential) }}</p><p>{{ player.apps }} PJ · {{ player.season_goals }} goles · {{ player.season_assists }} asistencias · rating {{ '%.2f'|format(player.rating) }}</p><p>Valor {{ player.value|money }} · Salario {{ player.salary|money }} · Contrato {{ player.contract_until }}</p></div>
+  <div class="card"><h3>Estado</h3><p>Forma {{ '%.1f'|format(player.form) }} · Fatiga {{ '%.0f'|format(player.fatigue) }}% · Moral {{ player.morale }}/20</p><p>{% if player.injury %}<span class="badge danger">Lesionado {{ player.injury }} partidos</span>{% elif player.suspension %}<span class="badge warn">Sancionado</span>{% else %}<span class="badge ok">Disponible</span>{% endif %}</p><p class="muted">Polivalencia {{ player.polivalencia }}</p></div>
+  <div class="card"><h3>Overalls</h3>{% for k,v in player.overalls.items() %}<p>{{ k }}: <b>{{ '%.1f'|format(v) }}</b></p>{% endfor %}</div>
+</div>
+<div class="card">
+<h3>Atributos</h3>
+<div class="grid grid-2">
+{% for group, keys in [('Técnica',['control','pase','conduccion','golpeo','flick','regate_3d','definicion']),('Set pieces',['aerial','pc_injection','pc_trap','pc_flick','pc_deflection','pc_first_runner','pc_gk_save','stroke_shot','stroke_save','free_hit']),('Táctica',['posicionamiento','pressing','cobertura','transicion','desmarque']),('Física',['velocidad','resistencia','fuerza','agilidad','coordinacion']),('Mental',['decisiones','concentracion','competitividad','liderazgo']),('Portero',['reflejos','blocaje','distribucion','uno_vs_uno','alto','rebote_gk'])] %}
+<div><h3>{{ group }}</h3>{% for k in keys %}{% if k in player.attributes %}<p class="small">{{ k.replace('_',' ')|title }}: <b>{{ player.attributes[k] }}</b></p>{% endif %}{% endfor %}</div>
+{% endfor %}
+</div>
+</div>
+{% endblock %}

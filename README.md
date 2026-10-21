@@ -69,6 +69,14 @@ El proyecto incluye un juego de entrenador/gestión, solo texto, inspirado en Fo
 cd manager && python3 run.py
 ```
 
+Alpha web local:
+
+```bash
+cd manager && python3 run_web.py
+```
+
+Abre `http://127.0.0.1:5000`.
+
 Simulación automática de una temporada:
 
 ```bash

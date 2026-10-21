@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Plantilla{% endblock %}
+{% block content %}
+<div class="row" style="justify-content:space-between"><h1>Plantilla</h1><span class="badge">{{ team.players|length }} fichas · {{ team.squad|length }} jugadores</span></div>
+<div class="card">
+<table>
+<thead><tr><th>Jugador</th><th>Pos</th><th class="num">Edad</th><th class="num">OVR</th><th class="num">Forma</th><th class="num">Fatiga</th><th class="num">Moral</th><th>Estado</th><th class="num">Goles</th><th class="num">Salario</th><th>Contrato</th></tr></thead>
+<tbody>
+{% for p in players %}
+<tr>
+  <td><a href="{{ url_for('player_detail', player_id=p.id) }}">{{ p.name }}</a> <span class="tag">{{ p.archetype }}</span></td>
+  <td>{{ p.subposition }}</td><td class="num">{{ p.age }}</td><td class="num">{{ '%.1f'|format(p.overall) }}</td>
+  <td class="num">{{ '%.1f'|format(p.form) }}</td><td class="num">{{ '%.0f'|format(p.fatigue) }}%</td><td class="num">{{ p.morale }}</td>
+  <td>{% if p.injury %}<span class="badge danger">Lesionado {{ p.injury }}</span>{% elif p.suspension %}<span class="badge warn">Sancionado</span>{% else %}<span class="badge ok">Disponible</span>{% endif %}</td>
+  <td class="num">{{ p.season_goals }}</td><td class="num">{{ p.salary|money }}</td><td>{{ p.contract_until }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Prensa{% endblock %}
+{% block content %}
+<h1>Rueda de prensa</h1>
+{% if done %}
+<div class="card"><h3>Rueda completada</h3>{% for item in state.press_history[-5:] %}<p><b>J{{ item.round }}</b> · {{ item.headline }}<br><span class="muted">{{ item.answer }}</span></p>{% endfor %}</div>
+{% else %}
+<div class="card"><form method="post">
+{% for q in questions %}<h3>{{ q.question }}</h3>{% for label,effects,headline in q.options %}<p><label><input type="radio" name="answer_{{q.id}}" value="{{ loop.index0 }}" {% if loop.first %}checked{% endif %}> {{ label }}</label></p>{% endfor %}{% endfor %}
+<button class="btn primary" type="submit">Enviar respuestas</button>
+</form></div>
+{% endif %}
+{% endblock %}

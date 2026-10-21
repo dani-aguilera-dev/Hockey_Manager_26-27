@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Staff{% endblock %}
+{% block content %}
+<h1>Staff y junta</h1>
+<div class="grid grid-2">
+<div class="card"><h3>Staff técnico</h3><table><thead><tr><th>Rol</th><th>Nombre</th><th class="num">Rating</th><th class="num">Salario</th><th></th></tr></thead><tbody>
+{% for m in team.staff %}<tr><td>{{ staff_labels.get(m.role, m.role) }}</td><td>{{ m.name }}<br><span class="tag">{{ m.source }} · {{ m.confidence }}</span></td><td class="num">{{ m.rating }}</td><td class="num">{{ m.salary|money }}</td><td><form method="post" action="{{ url_for('staff_fire', role=m.role) }}"><button class="btn danger small">Despedir</button></form></td></tr>{% endfor %}
+</tbody></table>
+<h3 style="margin-top:18px">Contratar</h3>
+{% for r in free_roles %}<a class="btn small" href="{{ url_for('staff_hire', role=r) }}">{{ staff_labels[r] }}</a> {% endfor %}
+</div>
+<div class="card"><h3>Junta directiva</h3><table><thead><tr><th>Cargo</th><th>Nombre</th><th>Fuente</th></tr></thead><tbody>
+{% for m in team.board %}<tr><td>{{ m.role.replace('_',' ')|title }}</td><td>{{ m.name }}</td><td class="small muted">{{ m.source }} · {{ m.confidence }}</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted">Objetivo: {{ team.board_expectation }} · Confianza {{ team.board_confidence }}/100 · Presión {{ team.board_pressure }} · Paciencia {{ team.board_patience }}/5</p>
+</div>
+</div>
+<div class="card"><h3>Efectos</h3><p>Plan automático / charla: segundo entrenador {{ team.staff_rating('assistant') }}/100 · Físico {{ team.staff_rating('fitness_coach') }}/100 · Fisio {{ team.staff_rating('physio') }}/100 · Analista {{ team.staff_rating('performance_analyst') }}/100 · Porteros {{ team.staff_rating('gk_coach') }}/100</p></div>
+{% endblock %}

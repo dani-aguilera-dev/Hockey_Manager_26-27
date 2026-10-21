@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Previa{% endblock %}
+{% block content %}
+<h1>Previa · {{ home.name }} vs {{ away.name }}</h1>
+<p class="muted">Jornada {{ fixture.round }} · {{ fixture.date|fdate }} · {{ home.stadium_name }}</p>
+<div class="grid grid-2">
+<div class="card"><h3>Once inicial</h3><div class="lineup">
+{% for p in line %}<div class="player-pill"><b>{{ p.name }}</b><br><span class="tag">{{ p.subposition }} · OVR {{ '%.1f'|format(p.overall) }} · fatiga {{ '%.0f'|format(p.fatigue) }}%</span></div>{% endfor %}
+</div><h3 style="margin-top:16px">Banquillo</h3>{% for p in bench %}<span class="badge">{{ p.name }}</span> {% endfor %}</div>
+<div class="card">
+<h3>Jugar</h3>
+<form method="post">
+  {% if fixture.away_id == team.id and travel %}
+    <h3>Viaje</h3>
+    {% for o in travel %}<p><label><input type="radio" name="travel" value="{{o.id}}" {% if o.id=='equilibrado' %}checked{% endif %}> {{ o.label }} · {{ o.cost|money }} · fatiga +{{ (o.fatigue*100)|round|int }}%</label></p>{% endfor %}
+  {% endif %}
+  <div class="actions">
+    <button class="btn primary" type="submit" formaction="{{ url_for('match_quick') }}">Simulación rápida</button>
+    <button class="btn blue" type="submit" formaction="{{ url_for('match_live_start') }}">Jugar en directo</button>
+  </div>
+</form>
+<p class="small muted">Si no has planificado la semana, el segundo entrenador aplicará el plan automático.</p>
+</div>
+</div>
+{% endblock %}

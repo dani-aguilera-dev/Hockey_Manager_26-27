@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-10-21 — Alpha web local
+
+### Añadido
+
+- Aplicación web Flask + Jinja para jugar desde el navegador:
+  - nueva partida DHA/DHB;
+  - carga y guardado SQLite;
+  - dashboard;
+  - plantilla y ficha;
+  - táctica y once;
+  - entrenamiento;
+  - mercado, contratos y agentes libres;
+  - staff y junta;
+  - cantera;
+  - prensa;
+  - Copa del Rey;
+  - clasificación y calendario;
+  - partido rápido;
+  - partido en directo con cuartos, momentos, cambios y táctica.
+- `manager/run_web.py`.
+- `manager/web/app.py`, plantillas y CSS.
+- `manager/docs/15_WEB_ALPHA.md`.
+- Tests de rutas web y partido en directo.
+
+### Cambiado
+
+- Tests ampliados a 49.
+
+### Pruebas
+
+```bash
+cd manager
+python3 -m pytest src/tests -q
+```
+
+Resultado: 49 tests superados.
+
+---
+
 ## 2026-10-21 — Corrección del formato de la Copa del Rey
 
 ### Corregido
