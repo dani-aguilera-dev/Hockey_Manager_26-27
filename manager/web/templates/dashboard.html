@@ -66,7 +66,7 @@
   </div>
   <div class="card"><h3>Jugadores clave</h3>{% for p in key_players %}<div style="margin-bottom:8px">{{ m.player_card(p, url_for('player_detail', player_id=p.id), compact=true) }}</div>{% endfor %}</div>
   <div class="card"><h3>Clasificación</h3><table><thead><tr><th>#</th><th>Equipo</th><th class="num">PTS</th><th class="num">DG</th></tr></thead><tbody>
-    {% for t in table[:8] %}<tr><td>{{ loop.index }}</td><td><a href="{{ url_for('team_detail', team_id=t.id) }}"><img class="crest crest-sm" src="{{ crest_src(t) }}" alt=""> {{ t.name }}</a></td><td class="num">{{ t.points }}</td><td class="num">{{ t.goals_for - t.goals_against }}</td></tr>{% endfor %}
+    {% for t in table[:8] %}<tr class="clickable-row" onclick="window.location='{{ url_for('team_detail', team_id=t.id) }}'"><td>{{ loop.index }}</td><td><a href="{{ url_for('team_detail', team_id=t.id) }}"><img class="crest crest-sm" src="{{ crest_src(t) }}" alt=""> {{ t.name }}</a></td><td class="num">{{ t.points }}</td><td class="num">{{ t.goals_for - t.goals_against }}</td></tr>{% endfor %}
   </tbody></table><a href="{{ url_for('table') }}">Ver clasificación y calendario</a></div>
 </div>
 <div class="grid grid-2" style="margin-top:14px">
